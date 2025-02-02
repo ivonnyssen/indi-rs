@@ -1,5 +1,5 @@
 //! INDI Protocol Server Implementation
-//! 
+//!
 //! This module provides the server implementation for the INDI protocol.
 //! It handles client connections, manages devices and their properties,
 //! and routes messages between clients and devices.
@@ -96,7 +96,7 @@ impl Server {
     /// Creates a new INDI server with the given configuration
     pub fn new(config: ServerConfig) -> Self {
         let (shutdown_tx, _) = broadcast::channel(1);
-        
+
         Self {
             config,
             state: Arc::new(RwLock::new(ServerState::new())),
@@ -129,8 +129,9 @@ impl Server {
 
     /// Starts the server
     pub async fn run(&self) -> Result<()> {
-        let listener = TcpListener::bind(self.config.bind_address).await
-            .map_err(|e| Error::Io(e))?;
+        let listener = TcpListener::bind(self.config.bind_address)
+            .await
+            .map_err(Error::Io)?;
 
         info!("INDI server listening on {}", self.config.bind_address);
 
@@ -157,7 +158,9 @@ impl Server {
     async fn handle_client(&self, socket: TcpStream, addr: SocketAddr) -> Result<()> {
         let state = self.state.read().await;
         if state.clients.len() >= self.config.max_clients {
-            return Err(Error::Connection("Maximum number of clients reached".to_string()));
+            return Err(Error::Connection(
+                "Maximum number of clients reached".to_string(),
+            ));
         }
         drop(state);
 
@@ -168,11 +171,9 @@ impl Server {
         let writer = Arc::new(Mutex::new(writer));
 
         let (tx, mut rx) = mpsc::channel(32);
-        
+
         // Store client connection
-        let connection = ClientConnection {
-            sender: tx,
-        };
+        let connection = ClientConnection { sender: tx };
 
         {
             let mut state = self.state.write().await;
@@ -182,7 +183,7 @@ impl Server {
         // Spawn writer task
         let writer_clone = Arc::clone(&writer);
         let mut shutdown_rx = self.shutdown.subscribe();
-        
+
         let writer_task = tokio::spawn(async move {
             loop {
                 tokio::select! {
@@ -329,15 +330,13 @@ mod tests {
         fn new(name: &str) -> Self {
             Self {
                 name: name.to_string(),
-                properties: vec![
-                    Property::new(
-                        name.to_string(),
-                        "TEST_PROP".to_string(),
-                        PropertyValue::Text("test".to_string()),
-                        PropertyState::Ok,
-                        crate::property::PropertyPerm::RW,
-                    ),
-                ],
+                properties: vec![Property::new(
+                    name.to_string(),
+                    "TEST_PROP".to_string(),
+                    PropertyValue::Text("test".to_string()),
+                    PropertyState::Ok,
+                    crate::property::PropertyPerm::RW,
+                )],
             }
         }
     }
@@ -367,7 +366,7 @@ mod tests {
 
         let server = Server::new(config);
         let device = TestDevice::new("TestDevice");
-        
+
         server.register_device(device).await.unwrap();
 
         // Run server in background
