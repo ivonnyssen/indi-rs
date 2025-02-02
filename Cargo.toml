@@ -1,0 +1,24 @@
+[package]
+name = "indi-rs"
+version = "0.1.0"
+edition = "2021"
+description = "A Rust implementation of the INDI (Instrument Neutral Distributed Interface) protocol"
+authors = ["Igor von Nyssen <igor@vonnyssen.com>"]
+license = "MIT OR Apache-2.0"
+repository = "https://github.com/ivonnyssen/indi-rs"
+documentation = "https://docs.rs/indi-rs"
+readme = "README.md"
+keywords = ["indi", "astronomy", "instrumentation", "protocol"]
+categories = ["aerospace", "network-programming", "api-bindings"]
+
+[dependencies]
+# Core dependencies will be added as needed
+tokio = { version = "1.0", features = ["full"] }
+bytes = "1.0"
+thiserror = "2.0.11"
+tracing = "0.1.41"
+quick-xml = { version = "0.37.2", features = ["serialize"] }
+async-trait = "0.1.74"
+
+[dev-dependencies]
+mockall = { version = "0.13.1", features = [] }
