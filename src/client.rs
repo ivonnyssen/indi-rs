@@ -1,5 +1,5 @@
 //! INDI Protocol Client Implementation
-//! 
+//!
 //! This module provides the client implementation for the INDI protocol.
 //! It handles connecting to INDI servers, sending commands, and receiving responses.
 
@@ -13,7 +13,7 @@ use tracing::{debug, error};
 
 use crate::error::Error;
 use crate::message::Message;
-use crate::property::{Property, PropertyValue, PropertyState, PropertyPerm};
+use crate::property::{Property, PropertyPerm, PropertyState, PropertyValue};
 use crate::Result;
 
 /// Default INDI server port
@@ -35,21 +35,12 @@ impl Default for ClientConfig {
 }
 
 /// INDI client state
-#[derive(Debug)]
+#[derive(Debug, Default)]
 struct ClientState {
     /// Known devices and their properties
     devices: HashMap<String, HashMap<String, Property>>,
     /// Connection status
     connected: bool,
-}
-
-impl Default for ClientState {
-    fn default() -> Self {
-        Self {
-            devices: HashMap::new(),
-            connected: false,
-        }
-    }
 }
 
 /// INDI client
@@ -107,7 +98,9 @@ impl Client {
         let value_xml = match value {
             PropertyValue::Text(s) => format!("<oneText>{s}</oneText>"),
             PropertyValue::Number(n, _) => format!("{n}"), // Simple number format for now
-            PropertyValue::Switch(b) => format!("<oneSwitch>{}</oneSwitch>", if b { "On" } else { "Off" }),
+            PropertyValue::Switch(b) => {
+                format!("<oneSwitch>{}</oneSwitch>", if b { "On" } else { "Off" })
+            }
             PropertyValue::Light(s) => format!("<oneLight>{s}</oneLight>"),
             PropertyValue::Blob(b) => format!("<oneBLOB>{}</oneBLOB>", String::from_utf8_lossy(&b)),
         };
@@ -137,7 +130,7 @@ impl Client {
     ) -> Result<()> {
         let socket = TcpStream::connect(config.server_addr).await?;
         state.lock().await.connected = true;
-        
+
         let (reader, mut writer) = tokio::io::split(socket);
         let mut reader = BufReader::new(reader);
         let mut line = String::new();
@@ -215,17 +208,17 @@ impl Client {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use tokio::net::TcpListener;
     use tokio::io::{AsyncReadExt, AsyncWriteExt};
+    use tokio::net::TcpListener;
 
     async fn setup_test_server() -> SocketAddr {
         let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
         let addr = listener.local_addr().unwrap();
-        
+
         tokio::spawn(async move {
             let (mut socket, _) = listener.accept().await.unwrap();
             let mut buf = [0; 1024];
-            
+
             loop {
                 match socket.read(&mut buf).await {
                     Ok(0) => break, // Connection closed
@@ -243,32 +236,28 @@ mod tests {
     #[tokio::test]
     async fn test_client_connection() {
         let addr = setup_test_server().await;
-        
-        let config = ClientConfig {
-            server_addr: addr,
-        };
+
+        let config = ClientConfig { server_addr: addr };
 
         let client = Client::new(config).await.unwrap();
-        
+
         // Give the client time to connect
         tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
-        
+
         assert!(client.is_connected().await);
     }
 
     #[tokio::test]
     async fn test_send_message() {
         let addr = setup_test_server().await;
-        
-        let config = ClientConfig {
-            server_addr: addr,
-        };
+
+        let config = ClientConfig { server_addr: addr };
 
         let client = Client::new(config).await.unwrap();
-        
+
         // Give the client time to connect
         tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
-        
+
         let message = Message::Message("Test message".to_string());
         client.send_message(message).await.unwrap();
     }

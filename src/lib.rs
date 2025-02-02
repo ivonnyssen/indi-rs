@@ -1,24 +1,24 @@
 //! INDI Protocol Implementation in Rust
-//! 
+//!
 //! This crate provides a pure Rust implementation of the INDI (Instrument Neutral Distributed Interface)
 //! protocol, designed for controlling astronomical instruments.
 
 #![warn(missing_docs)]
 #![warn(rust_2018_idioms)]
 
+pub mod client;
 pub mod error;
 pub mod message;
 pub mod property;
-pub mod client;
 pub mod server;
 
 /// Re-export of common types
 pub mod prelude {
+    pub use crate::client::{Client, ClientConfig};
     pub use crate::error::Error;
     pub use crate::message::Message;
-    pub use crate::property::{Property, PropertyState, PropertyPerm};
-    pub use crate::client::{Client, ClientConfig};
-    pub use crate::server::{Server, ServerConfig, DeviceDriver};
+    pub use crate::property::{Property, PropertyPerm, PropertyState};
+    pub use crate::server::{DeviceDriver, Server, ServerConfig};
 }
 
 /// Result type for INDI operations

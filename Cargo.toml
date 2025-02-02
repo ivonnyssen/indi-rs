@@ -2,6 +2,7 @@
 name = "indi-rs"
 version = "0.1.0"
 edition = "2021"
+rust-version = "1.78.0"  # Required for Cargo lock v4 format
 description = "A Rust implementation of the INDI (Instrument Neutral Distributed Interface) protocol"
 authors = ["Igor von Nyssen <igor@vonnyssen.com>"]
 license = "MIT OR Apache-2.0"

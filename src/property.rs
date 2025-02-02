@@ -1,14 +1,14 @@
 //! INDI Protocol Property Implementation
-//! 
+//!
 //! This module provides the property types and traits for the INDI protocol.
 //! Properties represent device characteristics and controls, with different
 //! types (Number, Text, Switch, etc.), states (Idle, OK, Busy, Alert),
 //! and permissions (RO, WO, RW).
 
-use std::str::FromStr;
-use std::fmt;
 use crate::error::Error;
 use crate::Result;
+use std::fmt;
+use std::str::FromStr;
 
 /// Property permission types
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -29,7 +29,10 @@ impl FromStr for PropertyPerm {
             "RO" => Ok(PropertyPerm::RO),
             "WO" => Ok(PropertyPerm::WO),
             "RW" => Ok(PropertyPerm::RW),
-            _ => Err(Error::Property(format!("Invalid property permission: {}", s))),
+            _ => Err(Error::Property(format!(
+                "Invalid property permission: {}",
+                s
+            ))),
         }
     }
 }
@@ -195,35 +198,29 @@ mod tests {
 
     #[test]
     fn test_property_states() {
-        assert_eq!("idle".parse::<PropertyState>().unwrap(), PropertyState::Idle);
+        assert_eq!(
+            "idle".parse::<PropertyState>().unwrap(),
+            PropertyState::Idle
+        );
         assert_eq!("ok".parse::<PropertyState>().unwrap(), PropertyState::Ok);
-        assert_eq!("busy".parse::<PropertyState>().unwrap(), PropertyState::Busy);
-        assert_eq!("alert".parse::<PropertyState>().unwrap(), PropertyState::Alert);
+        assert_eq!(
+            "busy".parse::<PropertyState>().unwrap(),
+            PropertyState::Busy
+        );
+        assert_eq!(
+            "alert".parse::<PropertyState>().unwrap(),
+            PropertyState::Alert
+        );
         assert!("invalid".parse::<PropertyState>().is_err());
     }
 
     #[test]
     fn test_property_value_display() {
-        assert_eq!(
-            PropertyValue::Text("test".to_string()).to_string(),
-            "test"
-        );
-        assert_eq!(
-            PropertyValue::Number(42.0, None).to_string(),
-            "42"
-        );
-        assert_eq!(
-            PropertyValue::Switch(true).to_string(),
-            "On"
-        );
-        assert_eq!(
-            PropertyValue::Light(PropertyState::Ok).to_string(),
-            "Ok"
-        );
-        assert_eq!(
-            PropertyValue::Blob(vec![1, 2, 3]).to_string(),
-            "3 bytes"
-        );
+        assert_eq!(PropertyValue::Text("test".to_string()).to_string(), "test");
+        assert_eq!(PropertyValue::Number(42.0, None).to_string(), "42");
+        assert_eq!(PropertyValue::Switch(true).to_string(), "On");
+        assert_eq!(PropertyValue::Light(PropertyState::Ok).to_string(), "Ok");
+        assert_eq!(PropertyValue::Blob(vec![1, 2, 3]).to_string(), "3 bytes");
     }
 
     #[test]
