@@ -56,8 +56,6 @@ pub trait DeviceDriver: Send + Sync {
 
 /// Client connection state
 struct ClientConnection {
-    /// Client address
-    address: SocketAddr,
     /// Message sender for this client
     sender: mpsc::Sender<Message>,
 }
@@ -173,7 +171,6 @@ impl Server {
         
         // Store client connection
         let connection = ClientConnection {
-            address: addr,
             sender: tx,
         };
 

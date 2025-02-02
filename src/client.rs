@@ -13,7 +13,7 @@ use tracing::{debug, error};
 
 use crate::error::Error;
 use crate::message::Message;
-use crate::property::{Property, PropertyValue};
+use crate::property::{Property, PropertyValue, PropertyState, PropertyPerm};
 use crate::Result;
 
 /// Default INDI server port
@@ -119,6 +119,11 @@ impl Client {
         self.send_message(message).await
     }
 
+    /// Get a device's properties
+    pub async fn get_device_properties(&self, device: &str) -> Option<HashMap<String, Property>> {
+        self.state.lock().await.devices.get(device).cloned()
+    }
+
     /// Returns true if the client is connected
     pub async fn is_connected(&self) -> bool {
         self.state.lock().await.connected
@@ -147,7 +152,27 @@ impl Client {
                             match Message::from_xml(&line) {
                                 Ok(msg) => {
                                     debug!("Received message: {:?}", msg);
-                                    // TODO: Update state based on message
+                                    // Update device state based on message
+                                    if let Message::DefProperty(_) = &msg {
+                                        if let (Ok(device), Ok(name), Ok(property_value)) = (
+                                            msg.get_device(),
+                                            msg.get_property_name(),
+                                            msg.get_property_value(),
+                                        ) {
+                                            let property = Property::new(
+                                                device.clone(),
+                                                name.clone(),
+                                                property_value,
+                                                PropertyState::Idle,
+                                                PropertyPerm::RO,
+                                            );
+                                            let mut state = state.lock().await;
+                                            state.devices
+                                                .entry(device)
+                                                .or_insert_with(HashMap::new)
+                                                .insert(name, property);
+                                        }
+                                    }
                                 }
                                 Err(e) => {
                                     error!("Failed to parse message: {}", e);

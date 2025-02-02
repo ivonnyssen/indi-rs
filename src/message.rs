@@ -3,10 +3,8 @@
 //! This module provides the message types and parsing functionality for the INDI protocol.
 //! Messages are XML-based and follow the INDI protocol specification.
 
-use quick_xml::events::{Event, BytesText};
+use quick_xml::events::Event;
 use quick_xml::reader::Reader;
-use quick_xml::writer::Writer;
-use std::io::Cursor;
 use std::str;
 
 use crate::error::Error;
