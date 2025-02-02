@@ -2,10 +2,12 @@
 # removed. Runs:
 # - address sanitizer - detects memory errors
 # - leak sanitizer - detects memory leaks
-# - loom - Permutation testing for concurrent code https://crates.io/crates/loom
 #
-# Note: Miri checks have been disabled as they are not suitable for network-focused crates
-# that make extensive use of system calls.
+# Note: 
+# - Miri checks have been disabled as they are not suitable for network-focused crates
+#   that make extensive use of system calls.
+# - Loom checks have been temporarily disabled until we set up permutation testing
+#   for our concurrent code.
 #
 # See check.yml for information about how the concurrency cancellation and workflow triggering works
 permissions:
@@ -55,16 +57,3 @@ jobs:
         env:
           LSAN_OPTIONS: "suppressions=lsan-suppressions.txt"
           RUSTFLAGS: "-Z sanitizer=leak"
-  loom:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          submodules: true
-      - name: Install stable
-        uses: dtolnay/rust-toolchain@stable
-      - name: cargo test --test loom
-        run: cargo test --release --test loom
-        env:
-          LOOM_MAX_PREEMPTIONS: 2
-          RUSTFLAGS: "--cfg loom"
