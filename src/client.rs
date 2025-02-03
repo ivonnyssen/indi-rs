@@ -308,9 +308,7 @@ impl Message {
     /// Get the device name from the message
     fn get_device(&self) -> Result<String> {
         let xml = match self {
-            Message::Get(xml) | Message::Define(xml) | Message::Set(xml) => {
-                xml
-            }
+            Message::Get(xml) | Message::Define(xml) | Message::Set(xml) => xml,
         };
         println!("Extracting device from XML: {}", xml);
         if let Some(start) = xml.find("device=\"") {
@@ -324,9 +322,7 @@ impl Message {
     /// Get the property name from the message
     fn get_property_name(&self) -> Result<String> {
         let xml = match self {
-            Message::Get(xml) | Message::Define(xml) | Message::Set(xml) => {
-                xml
-            }
+            Message::Get(xml) | Message::Define(xml) | Message::Set(xml) => xml,
         };
         println!("Extracting property name from XML: {}", xml);
         if let Some(start) = xml.find("name=\"") {
