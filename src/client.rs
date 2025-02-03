@@ -4,11 +4,10 @@
 //! It handles connecting to INDI servers, sending commands, and receiving responses.
 
 use std::collections::HashMap;
-use std::io::{Error as IoError, ErrorKind};
 use std::net::SocketAddr;
 use std::sync::Arc;
 use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
-use tokio::net::{TcpListener, TcpStream};
+use tokio::net::TcpStream;
 use tokio::sync::{mpsc, Mutex};
 
 use crate::error::Error;
@@ -19,7 +18,7 @@ type Result<T> = std::result::Result<T, Error>;
 /// Default INDI server port
 pub const DEFAULT_PORT: u16 = 7624;
 
-/// INDI client configuration
+/// Client configuration
 #[derive(Debug, Clone)]
 pub struct ClientConfig {
     /// Server address
@@ -34,24 +33,24 @@ impl Default for ClientConfig {
     }
 }
 
-/// INDI client state
+/// Client state
 #[derive(Debug, Default)]
 struct ClientState {
-    /// Known devices and their properties
-    devices: HashMap<String, HashMap<String, Property>>,
-    /// Connection status
+    /// Whether the client is connected
     connected: bool,
+    /// Device properties
+    devices: HashMap<String, HashMap<String, Property>>,
 }
 
 /// INDI client
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct Client {
     /// Client configuration
     config: ClientConfig,
-    /// Client state
-    state: Arc<Mutex<ClientState>>,
     /// Message sender
     sender: mpsc::Sender<Message>,
+    /// Client state
+    state: Arc<Mutex<ClientState>>,
 }
 
 impl Client {
@@ -62,8 +61,8 @@ impl Client {
 
         let client = Self {
             config,
-            state: Arc::clone(&state),
             sender,
+            state: Arc::clone(&state),
         };
 
         // Spawn connection handler
@@ -86,7 +85,7 @@ impl Client {
 
     /// Get property from server
     pub async fn get_property(&self, device: &str, name: &str) -> Result<()> {
-        let message = Message::GetProperty(format!(
+        let message = Message::Get(format!(
             "<getProperty device=\"{}\" name=\"{}\"/>",
             device, name
         ));
@@ -105,7 +104,7 @@ impl Client {
             PropertyValue::Blob(b) => format!("<oneBLOB>{}</oneBLOB>", String::from_utf8_lossy(&b)),
         };
 
-        let message = Message::SetProperty(format!(
+        let message = Message::Set(format!(
             "<setProperty device=\"{}\" name=\"{}\">{}</setProperty>",
             device, name, value_xml
         ));
@@ -147,29 +146,29 @@ impl Client {
                         }
                         Ok(n) => {
                             println!("Client: Read {} bytes: {:?}", n, line);
-                            
+
                             // Append to XML buffer
                             xml_buffer.push_str(&line);
-                            
+
                             // Check if we have a complete XML message
                             if (xml_buffer.contains("<getProperty") && xml_buffer.ends_with("/>\n")) ||
                                (xml_buffer.contains("<defProperty") && xml_buffer.contains("</defProperty>")) ||
                                (xml_buffer.contains("<setProperty") && xml_buffer.ends_with("/>\n")) {
                                 println!("Client: Complete XML message received: {}", xml_buffer);
-                                
+
                                 // Process complete XML message
                                 match Message::from_xml(&xml_buffer) {
                                     Ok(msg) => {
                                         println!("Client: Successfully parsed message: {:?}", msg);
                                         // Update device state based on message
-                                        if let Message::DefProperty(xml) = &msg {
+                                        if let Message::Define(xml) = &msg {
                                             println!("Client: Processing DefProperty message with XML: {}", xml);
                                             if let (Ok(device), Ok(name), Ok(value)) = (
                                                 msg.get_device(),
                                                 msg.get_property_name(),
                                                 msg.get_property_value(),
                                             ) {
-                                                println!("Client: Successfully extracted property details: device={}, name={}, value={:?}", 
+                                                println!("Client: Successfully extracted property details: device={}, name={}, value={:?}",
                                                     device, name, value);
                                                 let property = Property::new(
                                                     device.clone(),
@@ -204,11 +203,11 @@ impl Client {
                                         println!("Client: Failed message content: {:?}", xml_buffer);
                                     }
                                 }
-                                
+
                                 // Clear buffers for next message
                                 xml_buffer.clear();
                             }
-                            
+
                             line.clear();
                         }
                         Err(e) => {
@@ -251,31 +250,31 @@ impl Client {
 
 /// Messages that can be sent between client and server
 #[derive(Debug)]
-enum Message {
-    GetProperty(String),
-    DefProperty(String),
-    SetProperty(String),
+pub(crate) enum Message {
+    Get(String),
+    Define(String),
+    Set(String),
 }
 
 impl Message {
     /// Convert the message to XML format
     fn to_xml(&self) -> Result<String> {
         match self {
-            Message::GetProperty(xml) => {
+            Message::Get(xml) => {
                 let mut xml = xml.to_string();
                 if !xml.ends_with('\n') {
                     xml.push('\n');
                 }
                 Ok(xml)
             }
-            Message::DefProperty(xml) => {
+            Message::Define(xml) => {
                 let mut xml = xml.to_string();
                 if !xml.ends_with('\n') {
                     xml.push('\n');
                 }
                 Ok(xml)
             }
-            Message::SetProperty(xml) => {
+            Message::Set(xml) => {
                 let mut xml = xml.to_string();
                 if !xml.ends_with('\n') {
                     xml.push('\n');
@@ -289,13 +288,18 @@ impl Message {
     fn from_xml(xml: &str) -> Result<Self> {
         println!("Parsing XML: {:?}", xml);
         // Normalize whitespace and newlines
-        let xml = xml.trim().lines().map(|line| line.trim()).collect::<Vec<_>>().join(" ");
+        let xml = xml
+            .trim()
+            .lines()
+            .map(|line| line.trim())
+            .collect::<Vec<_>>()
+            .join(" ");
         if xml.starts_with("<getProperty") {
-            Ok(Message::GetProperty(xml.to_string()))
+            Ok(Message::Get(xml.to_string()))
         } else if xml.starts_with("<defProperty") {
-            Ok(Message::DefProperty(xml.to_string()))
+            Ok(Message::Define(xml.to_string()))
         } else if xml.starts_with("<setProperty") {
-            Ok(Message::SetProperty(xml.to_string()))
+            Ok(Message::Set(xml.to_string()))
         } else {
             Err(Error::Message("Invalid XML message".to_string()))
         }
@@ -304,7 +308,9 @@ impl Message {
     /// Get the device name from the message
     fn get_device(&self) -> Result<String> {
         let xml = match self {
-            Message::GetProperty(xml) | Message::DefProperty(xml) | Message::SetProperty(xml) => xml,
+            Message::Get(xml) | Message::Define(xml) | Message::Set(xml) => {
+                xml
+            }
         };
         println!("Extracting device from XML: {}", xml);
         if let Some(start) = xml.find("device=\"") {
@@ -318,7 +324,9 @@ impl Message {
     /// Get the property name from the message
     fn get_property_name(&self) -> Result<String> {
         let xml = match self {
-            Message::GetProperty(xml) | Message::DefProperty(xml) | Message::SetProperty(xml) => xml,
+            Message::Get(xml) | Message::Define(xml) | Message::Set(xml) => {
+                xml
+            }
         };
         println!("Extracting property name from XML: {}", xml);
         if let Some(start) = xml.find("name=\"") {
@@ -332,7 +340,7 @@ impl Message {
     /// Get the property value from the message
     fn get_property_value(&self) -> Result<String> {
         match self {
-            Message::DefProperty(xml) => {
+            Message::Define(xml) => {
                 println!("Extracting property value from XML: {}", xml);
                 if let Some(start) = xml.find("<oneText") {
                     if let Some(end) = xml[start..].find("</oneText>") {
@@ -362,7 +370,7 @@ mod tests {
             println!("Test server: Waiting for connection");
             let (mut socket, client_addr) = listener.accept().await.unwrap();
             println!("Test server: Accepted connection from {}", client_addr);
-            
+
             let (reader, mut writer) = socket.split();
             let mut reader = BufReader::new(reader);
             let mut line = String::new();
@@ -375,14 +383,14 @@ mod tests {
                     }
                     Ok(n) => {
                         println!("Test server: Read {} bytes: {:?}", n, line);
-                        
+
                         // Echo back the received message
                         if !line.ends_with('\n') {
                             line.push('\n');
                         }
                         writer.write_all(line.as_bytes()).await.unwrap();
                         println!("Test server: Echoed message back");
-                        
+
                         // If this is a getProperty message, send back a defProperty
                         if line.contains("getProperty") {
                             println!("Test server: Detected getProperty request");
@@ -395,11 +403,11 @@ mod tests {
                             writer.write_all(def_prop.as_bytes()).await.unwrap();
                             writer.flush().await.unwrap();
                             println!("Test server: Sent and flushed defProperty response");
-                            
+
                             // Add a small delay to ensure the client has time to process
                             tokio::time::sleep(tokio::time::Duration::from_millis(50)).await;
                         }
-                        
+
                         line.clear();
                     }
                     Err(e) => {
@@ -422,39 +430,51 @@ mod tests {
         let addr = setup_test_server().await;
         let config = ClientConfig { server_addr: addr };
         let client = Client::new(config).await.unwrap();
-        
+
         // Wait for connection to be established
         let mut retries = 5;
         while !client.is_connected().await && retries > 0 {
             tokio::time::sleep(tokio::time::Duration::from_millis(50)).await;
             retries -= 1;
         }
-        assert!(client.is_connected().await, "Failed to establish connection");
-        
+        assert!(
+            client.is_connected().await,
+            "Failed to establish connection"
+        );
+
         // Initially no devices
         let props = client.get_device_properties("test_device").await;
         assert!(props.is_none(), "Expected no properties initially");
 
         // Send a get_property request which should trigger the server to send a DefProperty response
         println!("Test: Sending get_property request");
-        client.get_property("test_device", "test_prop").await.unwrap();
-        
+        client
+            .get_property("test_device", "test_prop")
+            .await
+            .unwrap();
+
         // Give time for the server response to be processed
         println!("Test: Waiting for response processing");
         tokio::time::sleep(tokio::time::Duration::from_millis(200)).await;
-        
+
         // Check the client's state directly
         {
             let state = client.state.lock().await;
             println!("Test: Client state after get_property: {:?}", state.devices);
         }
-        
+
         // Now we should have the property
         let props = client.get_device_properties("test_device").await;
-        assert!(props.is_some(), "Expected properties to be present after receiving DefProperty");
+        assert!(
+            props.is_some(),
+            "Expected properties to be present after receiving DefProperty"
+        );
         let props = props.unwrap();
-        assert!(props.contains_key("test_prop"), "Expected test_prop to be present in properties");
-        
+        assert!(
+            props.contains_key("test_prop"),
+            "Expected test_prop to be present in properties"
+        );
+
         // Print the actual property value
         if let Some(prop) = props.get("test_prop") {
             println!("Test: Found property: {:?}", prop);
@@ -469,7 +489,7 @@ mod tests {
     async fn test_message_parsing() {
         let xml = "<getProperty device=\"test_device\" name=\"test_prop\"/>";
         let msg = Message::from_xml(xml).unwrap();
-        assert!(matches!(msg, Message::GetProperty(_)));
+        assert!(matches!(msg, Message::Get(_)));
         assert_eq!(msg.get_device().unwrap(), "test_device");
         assert_eq!(msg.get_property_name().unwrap(), "test_prop");
     }
