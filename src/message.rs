@@ -245,11 +245,7 @@ impl Message {
                     .decode(value.trim())
                     .map_err(|_| Error::Message("Invalid base64 data".to_string()))?;
                 let size = data.len();
-                Ok(PropertyValue::Blob {
-                    data,
-                    format,
-                    size,
-                })
+                Ok(PropertyValue::Blob { data, format, size })
             }
             _ => Err(Error::Message(format!(
                 "Unknown property value type: {}",

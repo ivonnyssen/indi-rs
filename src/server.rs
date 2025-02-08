@@ -280,7 +280,7 @@ impl Server {
                         name.to_string(),
                         value.clone(),
                         PropertyState::Ok,
-                        crate::property::PropertyPerm::RW,
+                        crate::property::PropertyPerm::ReadWrite,
                     );
 
                     // Update property
@@ -335,7 +335,7 @@ mod tests {
                     "TEST_PROP".to_string(),
                     PropertyValue::Text("test".to_string()),
                     PropertyState::Ok,
-                    crate::property::PropertyPerm::RW,
+                    crate::property::PropertyPerm::ReadWrite,
                 )],
             }
         }

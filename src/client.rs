@@ -34,8 +34,6 @@ pub struct ClientState {
 /// INDI client
 #[derive(Debug, Clone)]
 pub struct Client {
-    /// Client configuration
-    config: ClientConfig,
     /// Client state
     state: Arc<Mutex<ClientState>>,
     /// Message sender
@@ -50,18 +48,13 @@ impl Client {
 
         // Spawn connection handler task
         let state_clone = state.clone();
-        let config_clone = config.clone();
         tokio::spawn(async move {
-            if let Err(e) = Self::connection_task(receiver, config_clone, state_clone).await {
+            if let Err(e) = Self::connection_task(receiver, config, state_clone).await {
                 eprintln!("Connection task error: {}", e);
             }
         });
 
-        Ok(Self {
-            config,
-            state,
-            sender,
-        })
+        Ok(Self { state, sender })
     }
 
     /// Set property value
@@ -90,9 +83,10 @@ impl Client {
             device, name, value_xml
         ));
 
-        self.sender.send(message).await.map_err(|_| {
-            Error::Message("Failed to send message: channel closed".to_string())
-        })?;
+        self.sender
+            .send(message)
+            .await
+            .map_err(|_| Error::Message("Failed to send message: channel closed".to_string()))?;
 
         Ok(())
     }
@@ -158,19 +152,16 @@ impl Client {
     async fn handle_message(state: &Arc<Mutex<ClientState>>, message: Message) -> Result<()> {
         let mut state = state.lock().await;
 
-        match message {
-            Message::DefProperty(_) => {
-                let device = message.get_device()?;
-                let name = message.get_property_name()?;
-                let value = message.get_property_value()?;
+        if let Message::DefProperty(_) = message {
+            let device = message.get_device()?;
+            let name = message.get_property_name()?;
+            let value = message.get_property_value()?;
 
-                let device_props = state.devices.entry(device.clone()).or_default();
-                device_props.insert(
-                    name.clone(),
-                    Property::new(device, name, value, Default::default(), Default::default()),
-                );
-            }
-            _ => (),
+            let device_props = state.devices.entry(device.clone()).or_default();
+            device_props.insert(
+                name.clone(),
+                Property::new(device, name, value, Default::default(), Default::default()),
+            );
         }
 
         Ok(())

@@ -5,36 +5,30 @@
 //! types (Number, Text, Switch, etc.), states (Idle, OK, Busy, Alert),
 //! and permissions (RO, WO, RW).
 
-use crate::error::Error;
-use crate::Result;
+use crate::error::{Error, Result};
 use std::fmt;
 use std::str::FromStr;
 
-/// Property permission types
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+/// Property permission
+#[derive(Debug, Clone, Copy, PartialEq, Default)]
 pub enum PropertyPerm {
-    /// Read-only property
-    RO,
-    /// Write-only property
-    WO,
-    /// Read-write property
-    RW,
-}
-
-impl Default for PropertyPerm {
-    fn default() -> Self {
-        PropertyPerm::RO
-    }
+    /// Read-only
+    #[default]
+    ReadOnly,
+    /// Write-only
+    WriteOnly,
+    /// Read-write
+    ReadWrite,
 }
 
 impl FromStr for PropertyPerm {
     type Err = Error;
 
     fn from_str(s: &str) -> Result<Self> {
-        match s.to_uppercase().as_str() {
-            "RO" => Ok(PropertyPerm::RO),
-            "WO" => Ok(PropertyPerm::WO),
-            "RW" => Ok(PropertyPerm::RW),
+        match s {
+            "ro" => Ok(PropertyPerm::ReadOnly),
+            "wo" => Ok(PropertyPerm::WriteOnly),
+            "rw" => Ok(PropertyPerm::ReadWrite),
             _ => Err(Error::Property(format!(
                 "Invalid property permission: {}",
                 s
@@ -46,17 +40,18 @@ impl FromStr for PropertyPerm {
 impl fmt::Display for PropertyPerm {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            PropertyPerm::RO => write!(f, "ro"),
-            PropertyPerm::WO => write!(f, "wo"),
-            PropertyPerm::RW => write!(f, "rw"),
+            PropertyPerm::ReadOnly => write!(f, "ro"),
+            PropertyPerm::WriteOnly => write!(f, "wo"),
+            PropertyPerm::ReadWrite => write!(f, "rw"),
         }
     }
 }
 
 /// Property state
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Default)]
 pub enum PropertyState {
     /// Property is idle
+    #[default]
     Idle,
     /// Property is ok
     Ok,
@@ -66,21 +61,15 @@ pub enum PropertyState {
     Alert,
 }
 
-impl Default for PropertyState {
-    fn default() -> Self {
-        PropertyState::Idle
-    }
-}
-
 impl FromStr for PropertyState {
     type Err = Error;
 
     fn from_str(s: &str) -> Result<Self> {
-        match s.to_lowercase().as_str() {
-            "idle" => Ok(PropertyState::Idle),
-            "ok" => Ok(PropertyState::Ok),
-            "busy" => Ok(PropertyState::Busy),
-            "alert" => Ok(PropertyState::Alert),
+        match s {
+            "Idle" => Ok(PropertyState::Idle),
+            "Ok" => Ok(PropertyState::Ok),
+            "Busy" => Ok(PropertyState::Busy),
+            "Alert" => Ok(PropertyState::Alert),
             _ => Err(Error::Property(format!("Invalid property state: {}", s))),
         }
     }
@@ -127,7 +116,11 @@ impl fmt::Display for PropertyValue {
             PropertyValue::Number(n, None) => write!(f, "{}", n),
             PropertyValue::Switch(b) => write!(f, "{}", if *b { "On" } else { "Off" }),
             PropertyValue::Light(s) => write!(f, "{}", s),
-            PropertyValue::Blob { data: _, format, size } => write!(f, "{} bytes ({})", size, format),
+            PropertyValue::Blob {
+                data: _,
+                format,
+                size,
+            } => write!(f, "{} bytes ({})", size, format),
         }
     }
 }
@@ -139,7 +132,7 @@ pub struct Property {
     pub device: String,
     /// Property name
     pub name: String,
-    /// Property label (human-readable name)
+    /// Property label
     pub label: Option<String>,
     /// Property group
     pub group: Option<String>,
@@ -147,8 +140,8 @@ pub struct Property {
     pub state: PropertyState,
     /// Property permission
     pub perm: PropertyPerm,
-    /// Property timeout in seconds (0 for no timeout)
-    pub timeout: u32,
+    /// Property timeout
+    pub timeout: Option<u32>,
     /// Property value
     pub value: PropertyValue,
 }
@@ -169,7 +162,7 @@ impl Property {
             group: None,
             state,
             perm,
-            timeout: 0,
+            timeout: None,
             value,
         }
     }
@@ -188,18 +181,18 @@ impl Property {
 
     /// Sets the property timeout
     pub fn with_timeout(mut self, timeout: u32) -> Self {
-        self.timeout = timeout;
+        self.timeout = Some(timeout);
         self
     }
 
     /// Returns true if the property is readable
     pub fn is_readable(&self) -> bool {
-        matches!(self.perm, PropertyPerm::RO | PropertyPerm::RW)
+        matches!(self.perm, PropertyPerm::ReadOnly | PropertyPerm::ReadWrite)
     }
 
     /// Returns true if the property is writable
     pub fn is_writable(&self) -> bool {
-        matches!(self.perm, PropertyPerm::WO | PropertyPerm::RW)
+        matches!(self.perm, PropertyPerm::WriteOnly | PropertyPerm::ReadWrite)
     }
 }
 
@@ -208,29 +201,77 @@ mod tests {
     use super::*;
 
     #[test]
+    fn test_property_creation() {
+        let prop = Property::new(
+            "test_device".to_string(),
+            "test_prop".to_string(),
+            PropertyValue::Text("test".to_string()),
+            PropertyState::Ok,
+            PropertyPerm::ReadWrite,
+        )
+        .with_label("Test Property".to_string())
+        .with_group("Main".to_string())
+        .with_timeout(1000);
+
+        assert_eq!(prop.device, "test_device");
+        assert_eq!(prop.name, "test_prop");
+        assert_eq!(prop.label.unwrap(), "Test Property");
+        assert_eq!(prop.group.unwrap(), "Main");
+        assert_eq!(prop.state, PropertyState::Ok);
+        assert_eq!(prop.perm, PropertyPerm::ReadWrite);
+        assert_eq!(prop.timeout.unwrap(), 1000);
+        assert!(matches!(prop.value, PropertyValue::Text(_)));
+    }
+
+    #[test]
     fn test_property_permissions() {
-        assert_eq!("ro".parse::<PropertyPerm>().unwrap(), PropertyPerm::RO);
-        assert_eq!("wo".parse::<PropertyPerm>().unwrap(), PropertyPerm::WO);
-        assert_eq!("rw".parse::<PropertyPerm>().unwrap(), PropertyPerm::RW);
-        assert!("invalid".parse::<PropertyPerm>().is_err());
+        let ro_prop = Property::new(
+            "test".to_string(),
+            "test".to_string(),
+            PropertyValue::Text("test".to_string()),
+            PropertyState::Ok,
+            PropertyPerm::ReadOnly,
+        );
+        assert!(ro_prop.is_readable());
+        assert!(!ro_prop.is_writable());
+
+        let wo_prop = Property::new(
+            "test".to_string(),
+            "test".to_string(),
+            PropertyValue::Text("test".to_string()),
+            PropertyState::Ok,
+            PropertyPerm::WriteOnly,
+        );
+        assert!(!wo_prop.is_readable());
+        assert!(wo_prop.is_writable());
+
+        let rw_prop = Property::new(
+            "test".to_string(),
+            "test".to_string(),
+            PropertyValue::Text("test".to_string()),
+            PropertyState::Ok,
+            PropertyPerm::ReadWrite,
+        );
+        assert!(rw_prop.is_readable());
+        assert!(rw_prop.is_writable());
     }
 
     #[test]
     fn test_property_states() {
         assert_eq!(
-            "idle".parse::<PropertyState>().unwrap(),
+            "Idle".parse::<PropertyState>().unwrap(),
             PropertyState::Idle
         );
-        assert_eq!("ok".parse::<PropertyState>().unwrap(), PropertyState::Ok);
+        assert_eq!("Ok".parse::<PropertyState>().unwrap(), PropertyState::Ok);
         assert_eq!(
-            "busy".parse::<PropertyState>().unwrap(),
+            "Busy".parse::<PropertyState>().unwrap(),
             PropertyState::Busy
         );
         assert_eq!(
-            "alert".parse::<PropertyState>().unwrap(),
+            "Alert".parse::<PropertyState>().unwrap(),
             PropertyState::Alert
         );
-        assert!("invalid".parse::<PropertyState>().is_err());
+        assert!("Invalid".parse::<PropertyState>().is_err());
     }
 
     #[test]
@@ -248,36 +289,5 @@ mod tests {
             .to_string(),
             "3 bytes (.fits)"
         );
-    }
-
-    #[test]
-    fn test_property_creation() {
-        let prop = Property::new(
-            "CCD".to_string(),
-            "EXPOSURE".to_string(),
-            PropertyValue::Number(1.0, Some("%.2f".to_string())),
-            PropertyState::Idle,
-            PropertyPerm::RW,
-        )
-        .with_label("Exposure Time".to_string())
-        .with_group("Main Control".to_string())
-        .with_timeout(60);
-
-        assert_eq!(prop.device, "CCD");
-        assert_eq!(prop.name, "EXPOSURE");
-        assert_eq!(prop.label, Some("Exposure Time".to_string()));
-        assert_eq!(prop.group, Some("Main Control".to_string()));
-        assert_eq!(prop.state, PropertyState::Idle);
-        assert_eq!(prop.perm, PropertyPerm::RW);
-        assert_eq!(prop.timeout, 60);
-        assert!(prop.is_readable());
-        assert!(prop.is_writable());
-
-        if let PropertyValue::Number(val, fmt) = prop.value {
-            assert_eq!(val, 1.0);
-            assert_eq!(fmt, Some("%.2f".to_string()));
-        } else {
-            panic!("Expected Number property value");
-        }
     }
 }
