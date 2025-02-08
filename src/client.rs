@@ -78,9 +78,10 @@ impl Client {
 
     /// Send a message to the server
     pub async fn send_message(&self, message: Message) -> Result<()> {
-        self.sender.send(message).await.map_err(|e| {
-            Error::Message(format!("Failed to send message: {}", e))
-        })?;
+        self.sender
+            .send(message)
+            .await
+            .map_err(|e| Error::Message(format!("Failed to send message: {}", e)))?;
         Ok(())
     }
 
@@ -94,7 +95,12 @@ impl Client {
     }
 
     /// Set property value
-    pub async fn set_property(&self, device: &str, name: &str, value: &PropertyValue) -> Result<()> {
+    pub async fn set_property(
+        &self,
+        device: &str,
+        name: &str,
+        value: &PropertyValue,
+    ) -> Result<()> {
         let value_xml = match value {
             PropertyValue::Text(s) => format!("<oneText>{}</oneText>", s),
             PropertyValue::Number(n, _) => format!("<oneNumber>{}</oneNumber>", n),
@@ -167,8 +173,7 @@ impl Client {
                                                 msg.get_property_name(),
                                                 msg.get_property_value(),
                                             ) {
-                                                println!("Client: Successfully extracted property details: device={}, name={}, value={:?}", 
-                                                    device, name, value);
+                                                println!("Client: Successfully extracted property details: device={device}, name={name}, value={value:?}");
                                                 let property = Property::new(
                                                     device.clone(),
                                                     name.clone(),
