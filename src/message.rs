@@ -1,12 +1,12 @@
 use base64::engine::general_purpose::STANDARD;
 use base64::Engine;
+use nom::branch::alt;
 use nom::bytes::complete::{tag, take_while1};
 use nom::character::complete::{char, multispace0};
 use nom::multi::many0;
 use nom::sequence::delimited;
-use nom::branch::alt;
-use nom::Parser;
 use nom::IResult;
+use nom::Parser;
 
 use crate::error::{Error, Result};
 use crate::property::{PropertyPerm, PropertyState, PropertyValue};
@@ -118,7 +118,8 @@ impl Message {
     /// Get device name from message
     pub fn get_device(&self) -> Result<String> {
         let xml = self.to_xml()?;
-        let (_, (_, attrs)) = parse_element_start(&xml).map_err(|e| Error::Message(e.to_string()))?;
+        let (_, (_, attrs)) =
+            parse_element_start(&xml).map_err(|e| Error::Message(e.to_string()))?;
 
         attrs
             .iter()
@@ -130,7 +131,8 @@ impl Message {
     /// Get property name from message
     pub fn get_property_name(&self) -> Result<String> {
         let xml = self.to_xml()?;
-        let (_, (_, attrs)) = parse_element_start(&xml).map_err(|e| Error::Message(e.to_string()))?;
+        let (_, (_, attrs)) =
+            parse_element_start(&xml).map_err(|e| Error::Message(e.to_string()))?;
 
         attrs
             .iter()
@@ -142,7 +144,8 @@ impl Message {
     /// Get property value from message
     pub fn get_property_value(&self) -> Result<PropertyValue> {
         let xml = self.to_xml()?;
-        let (input, (_, _)) = parse_element_start(&xml).map_err(|e| Error::Message(e.to_string()))?;
+        let (input, (_, _)) =
+            parse_element_start(&xml).map_err(|e| Error::Message(e.to_string()))?;
 
         // Parse value element
         let (input, (value_type, attrs)) =
@@ -152,9 +155,9 @@ impl Message {
         match value_type.as_str() {
             "oneText" => Ok(PropertyValue::Text(value)),
             "oneNumber" => Ok(PropertyValue::Number(
-                value.parse().map_err(|_| {
-                    Error::Message(format!("Invalid number value: {}", value))
-                })?,
+                value
+                    .parse()
+                    .map_err(|_| Error::Message(format!("Invalid number value: {}", value)))?,
                 None,
             )),
             "oneSwitch" => Ok(PropertyValue::Switch(value == "On")),
@@ -169,20 +172,20 @@ impl Message {
                     .decode(value.trim())
                     .map_err(|_| Error::Message("Invalid base64 data".to_string()))?;
                 let size = data.len();
-                Ok(PropertyValue::Blob {
-                    data,
-                    format,
-                    size,
-                })
+                Ok(PropertyValue::Blob { data, format, size })
             }
-            _ => Err(Error::Message(format!("Invalid value type: {}", value_type))),
+            _ => Err(Error::Message(format!(
+                "Invalid value type: {}",
+                value_type
+            ))),
         }
     }
 
     /// Get property state from message
     pub fn get_property_state(&self) -> Result<PropertyState> {
         let xml = self.to_xml()?;
-        let (_, (_, attrs)) = parse_element_start(&xml).map_err(|e| Error::Message(e.to_string()))?;
+        let (_, (_, attrs)) =
+            parse_element_start(&xml).map_err(|e| Error::Message(e.to_string()))?;
 
         attrs
             .iter()
@@ -194,7 +197,8 @@ impl Message {
     /// Get property permission from message
     pub fn get_property_perm(&self) -> Result<PropertyPerm> {
         let xml = self.to_xml()?;
-        let (_, (_, attrs)) = parse_element_start(&xml).map_err(|e| Error::Message(e.to_string()))?;
+        let (_, (_, attrs)) =
+            parse_element_start(&xml).map_err(|e| Error::Message(e.to_string()))?;
 
         attrs
             .iter()
