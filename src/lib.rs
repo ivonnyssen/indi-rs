@@ -8,6 +8,9 @@
 
 pub mod client;
 pub mod error;
+/// Message handling for the INDI protocol.
+/// This module provides functionality for parsing and generating XML messages
+/// according to the INDI protocol specification.
 pub mod message;
 pub mod property;
 pub mod server;
