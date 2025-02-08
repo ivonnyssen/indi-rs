@@ -11,6 +11,7 @@ use tokio::net::TcpStream;
 use tokio::sync::{mpsc, Mutex};
 
 use crate::error::Error;
+use crate::message::Message;
 use crate::property::{Property, PropertyPerm, PropertyState, PropertyValue};
 
 type Result<T> = std::result::Result<T, Error>;
@@ -77,15 +78,15 @@ impl Client {
 
     /// Send a message to the server
     pub async fn send_message(&self, message: Message) -> Result<()> {
-        self.sender
-            .send(message)
-            .await
-            .map_err(|_| Error::Message("Failed to send message".to_string()))
+        self.sender.send(message).await.map_err(|e| {
+            Error::Message(format!("Failed to send message: {}", e))
+        })?;
+        Ok(())
     }
 
     /// Get property from server
     pub async fn get_property(&self, device: &str, name: &str) -> Result<()> {
-        let message = Message::Get(format!(
+        let message = Message::GetProperty(format!(
             "<getProperty device=\"{}\" name=\"{}\"/>",
             device, name
         ));
@@ -93,18 +94,16 @@ impl Client {
     }
 
     /// Set property value
-    pub async fn set_property(&self, device: &str, name: &str, value: PropertyValue) -> Result<()> {
+    pub async fn set_property(&self, device: &str, name: &str, value: &PropertyValue) -> Result<()> {
         let value_xml = match value {
-            PropertyValue::Text(s) => format!("<oneText>{s}</oneText>"),
-            PropertyValue::Number(n, _) => format!("{n}"), // Simple number format for now
-            PropertyValue::Switch(b) => {
-                format!("<oneSwitch>{}</oneSwitch>", if b { "On" } else { "Off" })
-            }
-            PropertyValue::Light(s) => format!("<oneLight>{}</oneLight>", s),
+            PropertyValue::Text(s) => format!("<oneText>{}</oneText>", s),
+            PropertyValue::Number(n, _) => format!("<oneNumber>{}</oneNumber>", n),
+            PropertyValue::Switch(s) => format!("<oneSwitch>{}</oneSwitch>", s),
+            PropertyValue::Light(l) => format!("<oneLight>{}</oneLight>", l),
             PropertyValue::Blob(b) => format!("<oneBLOB>{}</oneBLOB>", String::from_utf8_lossy(&b)),
         };
 
-        let message = Message::Set(format!(
+        let message = Message::SetProperty(format!(
             "<setProperty device=\"{}\" name=\"{}\">{}</setProperty>",
             device, name, value_xml
         ));
@@ -161,19 +160,19 @@ impl Client {
                                     Ok(msg) => {
                                         println!("Client: Successfully parsed message: {:?}", msg);
                                         // Update device state based on message
-                                        if let Message::Define(xml) = &msg {
+                                        if let Message::DefProperty(xml) = &msg {
                                             println!("Client: Processing DefProperty message with XML: {}", xml);
                                             if let (Ok(device), Ok(name), Ok(value)) = (
                                                 msg.get_device(),
                                                 msg.get_property_name(),
                                                 msg.get_property_value(),
                                             ) {
-                                                println!("Client: Successfully extracted property details: device={}, name={}, value={:?}",
+                                                println!("Client: Successfully extracted property details: device={}, name={}, value={:?}", 
                                                     device, name, value);
                                                 let property = Property::new(
                                                     device.clone(),
                                                     name.clone(),
-                                                    PropertyValue::Text(value),
+                                                    value,
                                                     PropertyState::Idle,
                                                     PropertyPerm::RO,
                                                 );
@@ -245,109 +244,6 @@ impl Client {
         }
 
         Ok(())
-    }
-}
-
-/// Messages that can be sent between client and server
-#[derive(Debug)]
-pub(crate) enum Message {
-    Get(String),
-    Define(String),
-    Set(String),
-}
-
-impl Message {
-    /// Convert the message to XML format
-    fn to_xml(&self) -> Result<String> {
-        match self {
-            Message::Get(xml) => {
-                let mut xml = xml.to_string();
-                if !xml.ends_with('\n') {
-                    xml.push('\n');
-                }
-                Ok(xml)
-            }
-            Message::Define(xml) => {
-                let mut xml = xml.to_string();
-                if !xml.ends_with('\n') {
-                    xml.push('\n');
-                }
-                Ok(xml)
-            }
-            Message::Set(xml) => {
-                let mut xml = xml.to_string();
-                if !xml.ends_with('\n') {
-                    xml.push('\n');
-                }
-                Ok(xml)
-            }
-        }
-    }
-
-    /// Parse a message from XML format
-    fn from_xml(xml: &str) -> Result<Self> {
-        println!("Parsing XML: {:?}", xml);
-        // Normalize whitespace and newlines
-        let xml = xml
-            .trim()
-            .lines()
-            .map(|line| line.trim())
-            .collect::<Vec<_>>()
-            .join(" ");
-        if xml.starts_with("<getProperty") {
-            Ok(Message::Get(xml.to_string()))
-        } else if xml.starts_with("<defProperty") {
-            Ok(Message::Define(xml.to_string()))
-        } else if xml.starts_with("<setProperty") {
-            Ok(Message::Set(xml.to_string()))
-        } else {
-            Err(Error::Message("Invalid XML message".to_string()))
-        }
-    }
-
-    /// Get the device name from the message
-    fn get_device(&self) -> Result<String> {
-        let xml = match self {
-            Message::Get(xml) | Message::Define(xml) | Message::Set(xml) => xml,
-        };
-        println!("Extracting device from XML: {}", xml);
-        if let Some(start) = xml.find("device=\"") {
-            if let Some(end) = xml[start + 8..].find('"') {
-                return Ok(xml[start + 8..start + 8 + end].to_string());
-            }
-        }
-        Err(Error::Message("No device found in XML".to_string()))
-    }
-
-    /// Get the property name from the message
-    fn get_property_name(&self) -> Result<String> {
-        let xml = match self {
-            Message::Get(xml) | Message::Define(xml) | Message::Set(xml) => xml,
-        };
-        println!("Extracting property name from XML: {}", xml);
-        if let Some(start) = xml.find("name=\"") {
-            if let Some(end) = xml[start + 6..].find('"') {
-                return Ok(xml[start + 6..start + 6 + end].to_string());
-            }
-        }
-        Err(Error::Message("No property name found in XML".to_string()))
-    }
-
-    /// Get the property value from the message
-    fn get_property_value(&self) -> Result<String> {
-        match self {
-            Message::Define(xml) => {
-                println!("Extracting property value from XML: {}", xml);
-                if let Some(start) = xml.find("<oneText") {
-                    if let Some(end) = xml[start..].find("</oneText>") {
-                        let value_start = xml[start..start + end].rfind('>').unwrap() + 1;
-                        return Ok(xml[start + value_start..start + end].to_string());
-                    }
-                }
-                Err(Error::Message("No property value found in XML".to_string()))
-            }
-            _ => Err(Error::Message("Not a DefProperty message".to_string())),
-        }
     }
 }
 
@@ -485,7 +381,7 @@ mod tests {
     async fn test_message_parsing() {
         let xml = "<getProperty device=\"test_device\" name=\"test_prop\"/>";
         let msg = Message::from_xml(xml).unwrap();
-        assert!(matches!(msg, Message::Get(_)));
+        assert!(matches!(msg, Message::GetProperty(_)));
         assert_eq!(msg.get_device().unwrap(), "test_device");
         assert_eq!(msg.get_property_name().unwrap(), "test_prop");
     }
