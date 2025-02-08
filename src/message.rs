@@ -3,9 +3,13 @@
 //! This module provides the message types and parsing functionality for the INDI protocol.
 //! Messages are XML-based and follow the INDI protocol specification.
 
-use quick_xml::events::Event;
-use quick_xml::reader::Reader;
-use std::str;
+use nom::{
+    bytes::complete::{tag, take_while1},
+    character::complete::{char, multispace0},
+    multi::many0,
+    sequence::delimited,
+    IResult,
+};
 
 use crate::error::Error;
 use crate::property::PropertyValue;
@@ -30,94 +34,125 @@ pub enum Message {
     Message(String),
 }
 
+#[derive(Debug)]
+struct XmlAttribute {
+    name: String,
+    value: String,
+}
+
+fn is_name_char(c: char) -> bool {
+    c.is_alphanumeric() || c == '_' || c == '-'
+}
+
+fn parse_attribute(input: &str) -> IResult<&str, XmlAttribute> {
+    let (input, _) = multispace0(input)?;
+    let (input, name) = take_while1(is_name_char)(input)?;
+    let (input, _) = tag("=")(input)?;
+    let (input, value) = delimited(char('"'), take_while1(|c| c != '"'), char('"'))(input)?;
+
+    Ok((
+        input,
+        XmlAttribute {
+            name: name.to_string(),
+            value: value.to_string(),
+        },
+    ))
+}
+
+fn parse_attributes(input: &str) -> IResult<&str, Vec<XmlAttribute>> {
+    many0(parse_attribute)(input)
+}
+
+fn parse_xml_tag(input: &str) -> IResult<&str, (String, Vec<XmlAttribute>, Option<String>)> {
+    let (input, _) = char('<')(input)?;
+    let (input, tag_name) = take_while1(is_name_char)(input)?;
+    let (input, attrs) = parse_attributes(input)?;
+    let (input, _) = multispace0(input)?;
+
+    // Handle self-closing tags
+    let (input, content) = if input.starts_with("/>") {
+        let (input, _) = tag("/>")(input)?;
+        (input, None)
+    } else {
+        let (input, _) = char('>')(input)?;
+        let mut content = String::new();
+        let mut depth = 1;
+        let mut pos = 0;
+
+        // Convert input to chars for easier indexing
+        let chars: Vec<char> = input.chars().collect();
+
+        while pos < chars.len() {
+            let slice = &input[pos..];
+            let end_tag = format!("</{}", tag_name);
+            let start_tag = format!("<{}", tag_name);
+
+            if slice.starts_with(&end_tag) {
+                depth -= 1;
+                if depth == 0 {
+                    // Skip to end of tag
+                    while pos < chars.len() && chars[pos] != '>' {
+                        pos += 1;
+                    }
+                    pos += 1; // Skip '>'
+                    let remaining = &input[pos..];
+                    return Ok((remaining, (tag_name.to_string(), attrs, Some(content))));
+                }
+            } else if slice.starts_with(&start_tag) {
+                depth += 1;
+            }
+
+            if pos < chars.len() {
+                content.push(chars[pos]);
+            }
+            pos += 1;
+        }
+
+        (input, Some(content))
+    };
+
+    Ok((input, (tag_name.to_string(), attrs, content)))
+}
+
 impl Message {
     /// Parse an XML string into a Message
     pub fn from_xml(xml: &str) -> Result<Self> {
-        let mut reader = Reader::from_str(xml);
-        let mut buf = Vec::new();
-        let mut xml_content = String::new();
-        let mut in_root = false;
-        let mut root_tag = String::new();
+        println!("Parsing XML: {}", xml);
+        let (_, (tag_name, attrs, content)) = parse_xml_tag(xml.trim())
+            .map_err(|e| Error::Message(format!("Failed to parse XML: {}", e)))?;
 
-        loop {
-            match reader.read_event_into(&mut buf) {
-                Ok(Event::Start(ref e)) => {
-                    let name = e.name();
-                    let tag = str::from_utf8(name.as_ref())?.to_string();
-
-                    // Build XML content with attributes
-                    xml_content.push('<');
-                    xml_content.push_str(&tag);
-
-                    for attr in e.attributes().flatten() {
-                        let key = str::from_utf8(attr.key.as_ref())?.to_string();
-                        let value = str::from_utf8(&attr.value)?.to_string();
-                        xml_content.push_str(&format!(" {}=\"{}\"", key, value));
-                    }
-                    xml_content.push('>');
-
-                    if !in_root {
-                        in_root = true;
-                        root_tag = tag;
-                    }
-                }
-                Ok(Event::Text(ref e)) => {
-                    let text = str::from_utf8(e.as_ref())?.to_string();
-                    xml_content.push_str(&text);
-                }
-                Ok(Event::End(ref e)) => {
-                    let name = e.name();
-                    let tag = str::from_utf8(name.as_ref())?.to_string();
-                    xml_content.push_str(&format!("</{}>", tag));
-
-                    if in_root && tag == root_tag {
-                        return match root_tag.as_str() {
-                            "defDevice" => Ok(Message::DefDevice(xml_content)),
-                            "defProperty" => Ok(Message::DefProperty(xml_content)),
-                            "setProperty" => Ok(Message::SetProperty(xml_content)),
-                            "getProperty" => Ok(Message::GetProperty(xml_content)),
-                            "newProperty" => Ok(Message::NewProperty(xml_content)),
-                            "delProperty" => Ok(Message::DelProperty(xml_content)),
-                            "message" => Ok(Message::Message(xml_content)),
-                            _ => Err(Error::Message(format!("Unknown message type: {}", tag))),
-                        };
-                    }
-                }
-                Ok(Event::Empty(ref e)) => {
-                    let name = e.name();
-                    let tag = str::from_utf8(name.as_ref())?.to_string();
-
-                    // Build XML content with attributes
-                    xml_content.push('<');
-                    xml_content.push_str(&tag);
-
-                    for attr in e.attributes().flatten() {
-                        let key = str::from_utf8(attr.key.as_ref())?.to_string();
-                        let value = str::from_utf8(&attr.value)?.to_string();
-                        xml_content.push_str(&format!(" {}=\"{}\"", key, value));
-                    }
-                    xml_content.push_str("/>");
-
-                    if !in_root {
-                        return match tag.as_str() {
-                            "defDevice" => Ok(Message::DefDevice(xml_content)),
-                            "defProperty" => Ok(Message::DefProperty(xml_content)),
-                            "setProperty" => Ok(Message::SetProperty(xml_content)),
-                            "getProperty" => Ok(Message::GetProperty(xml_content)),
-                            "newProperty" => Ok(Message::NewProperty(xml_content)),
-                            "delProperty" => Ok(Message::DelProperty(xml_content)),
-                            "message" => Ok(Message::Message(xml_content)),
-                            _ => Err(Error::Message(format!("Unknown message type: {}", tag))),
-                        };
-                    }
-                }
-                Ok(Event::Eof) => break,
-                Err(e) => return Err(Error::Message(format!("Error parsing XML: {}", e))),
-                _ => (),
-            }
+        // Reconstruct the XML for storage
+        let mut xml_content = format!("<{}", tag_name);
+        for attr in &attrs {
+            xml_content.push_str(&format!(" {}=\"{}\"", attr.name, attr.value));
         }
 
-        Err(Error::Message("Invalid INDI message".to_string()))
+        if let Some(content) = content {
+            println!("Found content: {}", content);
+            xml_content.push('>');
+            xml_content.push_str(&content);
+            xml_content.push_str("</");
+            xml_content.push_str(&tag_name);
+            xml_content.push('>');
+        } else {
+            println!("No content found");
+            xml_content.push_str("/>");
+        }
+
+        println!("Reconstructed XML: {}", xml_content);
+        match tag_name.as_str() {
+            "defDevice" => Ok(Message::DefDevice(xml_content)),
+            "defProperty" => Ok(Message::DefProperty(xml_content)),
+            "setProperty" => Ok(Message::SetProperty(xml_content)),
+            "getProperty" => Ok(Message::GetProperty(xml_content)),
+            "newProperty" => Ok(Message::NewProperty(xml_content)),
+            "delProperty" => Ok(Message::DelProperty(xml_content)),
+            "message" => Ok(Message::Message(xml_content)),
+            _ => Err(Error::Message(format!(
+                "Unknown message type: {}",
+                tag_name
+            ))),
+        }
     }
 
     /// Convert a Message to an XML string
@@ -129,156 +164,87 @@ impl Message {
             | Message::GetProperty(xml)
             | Message::NewProperty(xml)
             | Message::DelProperty(xml)
-            | Message::Message(xml) => Ok(xml.to_string()),
+            | Message::Message(xml) => Ok(xml.clone()),
         }
     }
 
     /// Extract device name from XML message
     pub fn get_device(&self) -> Result<String> {
-        let xml = match self {
-            Message::DefDevice(xml)
-            | Message::DefProperty(xml)
-            | Message::SetProperty(xml)
-            | Message::GetProperty(xml)
-            | Message::NewProperty(xml)
-            | Message::DelProperty(xml)
-            | Message::Message(xml) => xml,
-        };
+        let xml = self.to_xml()?;
+        let (_, (_, attrs, _)) = parse_xml_tag(&xml)
+            .map_err(|e| Error::Message(format!("Failed to parse XML: {}", e)))?;
 
-        let mut reader = Reader::from_str(xml);
-        let mut buf = Vec::new();
-
-        while let Ok(event) = reader.read_event_into(&mut buf) {
-            if let Event::Start(ref e) | Event::Empty(ref e) = event {
-                for attr in e.attributes().flatten() {
-                    if attr.key.as_ref() == b"device" {
-                        let value = str::from_utf8(&attr.value)?.to_string();
-                        return Ok(value);
-                    }
-                }
-            }
-        }
-
-        Err(Error::Message(
-            "Device name not found in message".to_string(),
-        ))
+        attrs
+            .iter()
+            .find(|attr| attr.name == "device")
+            .map(|attr| attr.value.clone())
+            .ok_or_else(|| Error::Message("Device attribute not found".to_string()))
     }
 
     /// Extract property name from XML message
     pub fn get_property_name(&self) -> Result<String> {
-        let xml = match self {
-            Message::DefDevice(xml)
-            | Message::DefProperty(xml)
-            | Message::SetProperty(xml)
-            | Message::GetProperty(xml)
-            | Message::NewProperty(xml)
-            | Message::DelProperty(xml)
-            | Message::Message(xml) => xml,
-        };
+        let xml = self.to_xml()?;
+        let (_, (_, attrs, _)) = parse_xml_tag(&xml)
+            .map_err(|e| Error::Message(format!("Failed to parse XML: {}", e)))?;
 
-        let mut reader = Reader::from_str(xml);
-        let mut buf = Vec::new();
-
-        while let Ok(event) = reader.read_event_into(&mut buf) {
-            if let Event::Start(ref e) | Event::Empty(ref e) = event {
-                for attr in e.attributes().flatten() {
-                    if attr.key.as_ref() == b"name" {
-                        let value = str::from_utf8(&attr.value)?.to_string();
-                        return Ok(value);
-                    }
-                }
-            }
-        }
-
-        Err(Error::Message(
-            "Property name not found in message".to_string(),
-        ))
+        attrs
+            .iter()
+            .find(|attr| attr.name == "name")
+            .map(|attr| attr.value.clone())
+            .ok_or_else(|| Error::Message("Name attribute not found".to_string()))
     }
 
     /// Extract property value from XML message
     pub fn get_property_value(&self) -> Result<PropertyValue> {
-        let xml = match self {
-            Message::DefProperty(xml) | Message::SetProperty(xml) | Message::NewProperty(xml) => {
-                xml
-            }
+        let xml = self.to_xml()?;
+        println!("Getting property value from XML: {}", xml);
+        let (_, (tag_name, _attrs, content)) = parse_xml_tag(xml.trim())
+            .map_err(|e| Error::Message(format!("Failed to parse XML: {}", e)))?;
+
+        // Only certain message types can have property values
+        match tag_name.as_str() {
+            "defProperty" | "setProperty" | "newProperty" => (),
             _ => {
                 return Err(Error::Message(
                     "Message type does not contain property value".to_string(),
                 ))
             }
-        };
-
-        println!("Parsing XML: {}", xml);
-        let mut reader = Reader::from_str(xml);
-        let mut buf = Vec::new();
-        let mut in_value = false;
-        let mut value_type = None;
-        let mut value_text = String::new();
-
-        while let Ok(event) = reader.read_event_into(&mut buf) {
-            match event {
-                Event::Start(ref e) => {
-                    let name = e.name();
-                    let tag = str::from_utf8(name.as_ref())?.to_string();
-                    println!("Start tag: {}", tag);
-                    match tag.as_str() {
-                        "oneText" | "oneNumber" | "oneSwitch" | "oneLight" | "oneBLOB" => {
-                            in_value = true;
-                            value_type = Some(tag.clone());
-                            value_text.clear();
-                            println!("Found value type: {}", tag);
-                        }
-                        _ => (),
-                    }
-                }
-                Event::Text(ref e) if in_value => {
-                    let text = str::from_utf8(e.as_ref())?;
-                    println!("Found text: {}", text);
-                    value_text.push_str(text);
-                }
-                Event::End(ref e) => {
-                    let name = e.name();
-                    let tag = str::from_utf8(name.as_ref())?.to_string();
-                    println!("End tag: {}", tag);
-                    if ["oneText", "oneNumber", "oneSwitch", "oneLight", "oneBLOB"]
-                        .contains(&tag.as_str())
-                    {
-                        in_value = false;
-                        if let Some(vtype) = &value_type {
-                            let text = value_text.trim();
-                            println!("Final value: {} (type: {})", text, vtype);
-                            if !text.is_empty() {
-                                return match vtype.as_str() {
-                                    "oneText" => Ok(PropertyValue::Text(text.to_string())),
-                                    "oneNumber" => Ok(PropertyValue::Number(
-                                        text.parse().map_err(|_| {
-                                            Error::Message("Invalid number".to_string())
-                                        })?,
-                                        None,
-                                    )),
-                                    "oneSwitch" => Ok(PropertyValue::Switch(text == "On")),
-                                    "oneLight" => {
-                                        Ok(PropertyValue::Light(text.parse().map_err(|_| {
-                                            Error::Message("Invalid light state".to_string())
-                                        })?))
-                                    }
-                                    "oneBLOB" => Ok(PropertyValue::Blob(text.as_bytes().to_vec())),
-                                    _ => Err(Error::Message(
-                                        "Unknown property value type".to_string(),
-                                    )),
-                                };
-                            }
-                        }
-                    }
-                }
-                Event::Eof => break,
-                _ => (),
-            }
         }
 
-        Err(Error::Message(
-            "Property value not found in message".to_string(),
-        ))
+        let content = content.ok_or_else(|| Error::Message("No content found".to_string()))?;
+        println!("Found content: {}", content);
+
+        // Parse the value tag inside the content
+        let (_, (value_type, _attrs, value)) = parse_xml_tag(content.trim())
+            .map_err(|e| Error::Message(format!("Failed to parse value XML: {}", e)))?;
+
+        // Get the value, either from content or from empty tag
+        let value = match value {
+            Some(v) => v.trim().to_string(),
+            None => "".to_string(),
+        };
+        println!("Found value: {}", value);
+
+        match value_type.as_str() {
+            "oneText" => Ok(PropertyValue::Text(value)),
+            "oneNumber" => Ok(PropertyValue::Number(
+                value
+                    .parse()
+                    .map_err(|_| Error::Message("Invalid number".to_string()))?,
+                Some(value_type.to_string()),
+            )),
+            "oneSwitch" => Ok(PropertyValue::Switch(value == "On")),
+            "oneLight" => {
+                Ok(PropertyValue::Light(value.parse().map_err(|_| {
+                    Error::Message("Invalid light state".to_string())
+                })?))
+            }
+            "oneBLOB" => Ok(PropertyValue::Blob(value.as_bytes().to_vec())),
+            _ => Err(Error::Message(format!(
+                "Unknown property value type: {}",
+                value_type
+            ))),
+        }
     }
 }
 
@@ -288,28 +254,16 @@ mod tests {
 
     #[test]
     fn test_message_parsing() {
-        let xml = r#"<getProperty device="CCD" name="EXPOSURE"/>"#;
+        let xml = "<getProperty device=\"test_device\" name=\"test_prop\"/>";
         let msg = Message::from_xml(xml).unwrap();
-
-        let device = msg.get_device().unwrap();
-        assert_eq!(device, "CCD");
-
-        let prop_name = msg.get_property_name().unwrap();
-        assert_eq!(prop_name, "EXPOSURE");
-
-        match msg {
-            Message::GetProperty(content) => {
-                assert!(content.contains("device=\"CCD\""));
-                assert!(content.contains("name=\"EXPOSURE\""));
-            }
-            _ => panic!("Wrong message type"),
-        }
+        assert!(matches!(msg, Message::GetProperty(_)));
+        assert_eq!(msg.get_device().unwrap(), "test_device");
+        assert_eq!(msg.get_property_name().unwrap(), "test_prop");
     }
 
     #[test]
     fn test_property_value_parsing() {
-        let xml =
-            r#"<newProperty device="CCD" name="EXPOSURE"><oneNumber>1.5</oneNumber></newProperty>"#;
+        let xml = "<newProperty device=\"CCD\" name=\"EXPOSURE\"><oneNumber>1.5</oneNumber></newProperty>";
         let msg = Message::from_xml(xml).unwrap();
 
         if let PropertyValue::Number(val, _) = msg.get_property_value().unwrap() {
@@ -319,7 +273,7 @@ mod tests {
         }
 
         let xml =
-            r#"<newProperty device="CCD" name="POWER"><oneSwitch>On</oneSwitch></newProperty>"#;
+            "<newProperty device=\"CCD\" name=\"POWER\"><oneSwitch>On</oneSwitch></newProperty>";
         let msg = Message::from_xml(xml).unwrap();
 
         if let PropertyValue::Switch(val) = msg.get_property_value().unwrap() {
@@ -331,10 +285,8 @@ mod tests {
 
     #[test]
     fn test_message_serialization() {
-        let msg =
-            Message::GetProperty("<getProperty device=\"CCD\" name=\"EXPOSURE\"/>".to_string());
-        let xml = msg.to_xml().unwrap();
-        assert!(xml.contains("device=\"CCD\""));
-        assert!(xml.contains("name=\"EXPOSURE\""));
+        let xml = "<getProperty device=\"test_device\" name=\"test_prop\"/>";
+        let msg = Message::from_xml(xml).unwrap();
+        assert_eq!(msg.to_xml().unwrap(), xml);
     }
 }
