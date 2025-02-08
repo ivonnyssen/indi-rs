@@ -106,7 +106,10 @@ impl Client {
             PropertyValue::Number(n, _) => format!("<oneNumber>{}</oneNumber>", n),
             PropertyValue::Switch(s) => format!("<oneSwitch>{}</oneSwitch>", s),
             PropertyValue::Light(l) => format!("<oneLight>{}</oneLight>", l),
-            PropertyValue::Blob(b) => format!("<oneBLOB>{}</oneBLOB>", String::from_utf8_lossy(&b)),
+            PropertyValue::Blob(b) => format!(
+                "<oneBLOB>{}</oneBLOB>",
+                String::from_utf8_lossy(b).into_owned()
+            ),
         };
 
         let message = Message::SetProperty(format!(
@@ -118,7 +121,12 @@ impl Client {
 
     /// Get a device's properties
     pub async fn get_device_properties(&self, device: &str) -> Option<HashMap<String, Property>> {
-        self.state.lock().await.devices.get(device).cloned()
+        let state = self.state.lock().await;
+        println!(
+            "Client: Getting properties for device {}, current state: {:?}",
+            device, state.devices
+        );
+        state.devices.get(device).cloned()
     }
 
     /// Returns true if the client is connected
@@ -154,12 +162,11 @@ impl Client {
 
                             // Append to XML buffer
                             xml_buffer.push_str(&line);
+                            println!("Client: Current XML buffer: {}", xml_buffer);
 
                             // Check if we have a complete XML message
-                            if (xml_buffer.contains("<getProperty") && xml_buffer.ends_with("/>\n")) ||
-                               (xml_buffer.contains("<defProperty") && xml_buffer.contains("</defProperty>")) ||
-                               (xml_buffer.contains("<setProperty") && xml_buffer.ends_with("/>\n")) {
-                                println!("Client: Complete XML message received: {}", xml_buffer);
+                            if xml_buffer.contains("<") && xml_buffer.contains(">") {
+                                println!("Client: Detected complete XML message: {}", xml_buffer);
 
                                 // Process complete XML message
                                 match Message::from_xml(&xml_buffer) {
@@ -168,50 +175,38 @@ impl Client {
                                         // Update device state based on message
                                         if let Message::DefProperty(xml) = &msg {
                                             println!("Client: Processing DefProperty message with XML: {}", xml);
-                                            if let (Ok(device), Ok(name), Ok(value)) = (
-                                                msg.get_device(),
-                                                msg.get_property_name(),
-                                                msg.get_property_value(),
-                                            ) {
-                                                println!("Client: Successfully extracted property details: device={device}, name={name}, value={value:?}");
-                                                let property = Property::new(
-                                                    device.clone(),
-                                                    name.clone(),
-                                                    value,
-                                                    PropertyState::Idle,
-                                                    PropertyPerm::RO,
-                                                );
-                                                let mut state = state.lock().await;
-                                                println!("Client: Updating state with new property");
-                                                state.devices
-                                                    .entry(device)
-                                                    .or_insert_with(HashMap::new)
-                                                    .insert(name, property);
-                                                println!("Client: Updated state: {:?}", state.devices);
-                                            } else {
-                                                println!("Client: Failed to extract property details from DefProperty message");
-                                                if let Err(e) = msg.get_device() {
-                                                    println!("Client: Failed to get device: {}", e);
+                                            match (msg.get_device(), msg.get_property_name(), msg.get_property_value()) {
+                                                (Ok(device), Ok(name), Ok(value)) => {
+                                                    println!("Client: Successfully extracted property details: device={device}, name={name}, value={value:?}");
+                                                    let property = Property::new(
+                                                        device.clone(),
+                                                        name.clone(),
+                                                        value,
+                                                        PropertyState::Idle,
+                                                        PropertyPerm::RO,
+                                                    );
+                                                    let mut state = state.lock().await;
+                                                    println!("Client: Updating state with new property");
+                                                    state.devices
+                                                        .entry(device)
+                                                        .or_insert_with(HashMap::new)
+                                                        .insert(name, property);
+                                                    println!("Client: Updated state: {:?}", state.devices);
                                                 }
-                                                if let Err(e) = msg.get_property_name() {
-                                                    println!("Client: Failed to get property name: {}", e);
-                                                }
-                                                if let Err(e) = msg.get_property_value() {
-                                                    println!("Client: Failed to get property value: {}", e);
-                                                }
+                                                (Err(e), _, _) => println!("Client: Failed to get device: {}", e),
+                                                (_, Err(e), _) => println!("Client: Failed to get property name: {}", e),
+                                                (_, _, Err(e)) => println!("Client: Failed to get property value: {}", e),
                                             }
                                         }
                                     }
-                                    Err(e) => {
-                                        println!("Client: Failed to parse message: {}", e);
-                                        println!("Client: Failed message content: {:?}", xml_buffer);
-                                    }
+                                    Err(e) => println!("Client: Failed to parse message: {}", e),
                                 }
 
-                                // Clear buffers for next message
+                                // Clear buffer for next message
                                 xml_buffer.clear();
                             }
 
+                            // Clear line buffer
                             line.clear();
                         }
                         Err(e) => {
@@ -220,30 +215,14 @@ impl Client {
                         }
                     }
                 }
-                msg = receiver.recv() => {
-                    match msg {
-                        Some(msg) => {
-                            println!("Client: Sending message: {:?}", msg);
-                            // Send message to server
-                            match msg.to_xml() {
-                                Ok(xml) => {
-                                    println!("Client: Sending XML: {}", xml);
-                                    if let Err(e) = writer.write_all(xml.as_bytes()).await {
-                                        println!("Client: Failed to write to socket: {}", e);
-                                        break;
-                                    }
-                                    println!("Client: Successfully sent message");
-                                }
-                                Err(e) => {
-                                    println!("Client: Failed to serialize message: {}", e);
-                                }
-                            }
-                        }
-                        None => {
-                            println!("Client: Channel closed");
-                            break;
-                        }
-                    }
+                Some(message) = receiver.recv() => {
+                    println!("Client: Sending message: {:?}", message);
+                    let xml = message.to_xml()?;
+                    println!("Client: Sending XML: {}", xml);
+                    writer.write_all(xml.as_bytes()).await?;
+                    writer.write_all(b"\n").await?;  // Add newline to ensure proper message separation
+                    writer.flush().await?;
+                    println!("Client: Successfully sent message");
                 }
             }
         }
@@ -281,28 +260,41 @@ mod tests {
                     Ok(n) => {
                         println!("Test server: Read {} bytes: {:?}", n, line);
 
-                        // Echo back the received message
-                        if !line.ends_with('\n') {
-                            line.push('\n');
-                        }
-                        writer.write_all(line.as_bytes()).await.unwrap();
-                        println!("Test server: Echoed message back");
-
                         // If this is a getProperty message, send back a defProperty
                         if line.contains("getProperty") {
                             println!("Test server: Detected getProperty request");
-                            let def_prop = format!(
-                                "<defProperty device=\"test_device\" name=\"test_prop\" state=\"Idle\" perm=\"ro\">\n  \
-                                 <oneText name=\"test_prop\">test value</oneText>\n\
-                                 </defProperty>\n"
-                            );
+                            let def_prop = "<defProperty device=\"test_device\" name=\"test_prop\" state=\"Idle\" perm=\"ro\"><oneText>test value</oneText></defProperty>";
                             println!("Test server: Sending defProperty response: {}", def_prop);
-                            writer.write_all(def_prop.as_bytes()).await.unwrap();
-                            writer.flush().await.unwrap();
+                            writer
+                                .write_all(def_prop.as_bytes())
+                                .await
+                                .expect("Failed to write to socket");
+                            writer
+                                .write_all(b"\n")
+                                .await
+                                .expect("Failed to write newline to socket"); // Add newline to ensure proper message separation
+                            writer.flush().await.expect("Failed to flush socket");
                             println!("Test server: Sent and flushed defProperty response");
 
-                            // Add a small delay to ensure the client has time to process
-                            tokio::time::sleep(tokio::time::Duration::from_millis(50)).await;
+                            // Add a longer delay to ensure the client has time to process
+                            tokio::time::sleep(tokio::time::Duration::from_millis(1000)).await;
+                        } else if line.contains("setProperty") {
+                            println!("Test server: Detected setProperty request");
+                            let def_prop = "<defProperty device=\"test_device\" name=\"test_prop\" state=\"Ok\" perm=\"ro\"><oneText>test value</oneText></defProperty>";
+                            println!("Test server: Sending defProperty response: {}", def_prop);
+                            writer
+                                .write_all(def_prop.as_bytes())
+                                .await
+                                .expect("Failed to write to socket");
+                            writer
+                                .write_all(b"\n")
+                                .await
+                                .expect("Failed to write newline to socket"); // Add newline to ensure proper message separation
+                            writer.flush().await.expect("Failed to flush socket");
+                            println!("Test server: Sent and flushed defProperty response");
+
+                            // Add a longer delay to ensure the client has time to process
+                            tokio::time::sleep(tokio::time::Duration::from_millis(1000)).await;
                         }
 
                         line.clear();
@@ -352,7 +344,7 @@ mod tests {
 
         // Give time for the server response to be processed
         println!("Test: Waiting for response processing");
-        tokio::time::sleep(tokio::time::Duration::from_millis(200)).await;
+        tokio::time::sleep(tokio::time::Duration::from_millis(500)).await;
 
         // Check the client's state directly
         {

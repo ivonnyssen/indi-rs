@@ -18,7 +18,7 @@ tokio = { version = "1.0", features = ["full"] }
 bytes = "1.0"
 thiserror = "2.0.11"
 tracing = "0.1.41"
-quick-xml = { version = "0.37.2", features = ["serialize"] }
+nom = "7.1"
 async-trait = "0.1.74"
 
 [dev-dependencies]
