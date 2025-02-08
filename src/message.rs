@@ -1,8 +1,5 @@
-//! INDI Protocol Message Implementation
-//!
-//! This module provides the message types and parsing functionality for the INDI protocol.
-//! Messages are XML-based and follow the INDI protocol specification.
-
+use base64::engine::general_purpose::STANDARD;
+use base64::Engine;
 use nom::{
     bytes::complete::{tag, take_while1},
     character::complete::{char, multispace0},
@@ -11,9 +8,8 @@ use nom::{
     IResult,
 };
 
-use crate::error::Error;
+use crate::error::{Error, Result};
 use crate::property::PropertyValue;
-use crate::Result;
 
 /// INDI protocol message types
 #[derive(Debug, Clone)]
@@ -215,7 +211,7 @@ impl Message {
         println!("Found content: {}", content);
 
         // Parse the value tag inside the content
-        let (_, (value_type, _attrs, value)) = parse_xml_tag(content.trim())
+        let (_, (value_type, attrs, value)) = parse_xml_tag(content.trim())
             .map_err(|e| Error::Message(format!("Failed to parse value XML: {}", e)))?;
 
         // Get the value, either from content or from empty tag
@@ -239,7 +235,22 @@ impl Message {
                     Error::Message("Invalid light state".to_string())
                 })?))
             }
-            "oneBLOB" => Ok(PropertyValue::Blob(value.as_bytes().to_vec())),
+            "oneBLOB" => {
+                let format = attrs
+                    .iter()
+                    .find(|attr| attr.name == "format")
+                    .map(|attr| attr.value.clone())
+                    .unwrap_or_default();
+                let data = STANDARD
+                    .decode(value.trim())
+                    .map_err(|_| Error::Message("Invalid base64 data".to_string()))?;
+                let size = data.len();
+                Ok(PropertyValue::Blob {
+                    data,
+                    format,
+                    size,
+                })
+            }
             _ => Err(Error::Message(format!(
                 "Unknown property value type: {}",
                 value_type
@@ -278,6 +289,27 @@ mod tests {
 
         if let PropertyValue::Switch(val) = msg.get_property_value().unwrap() {
             assert!(val);
+        } else {
+            panic!("Wrong property value type");
+        }
+
+        // Test BLOB property
+        let data = vec![1, 2, 3, 4];
+        let xml = format!(
+            "<newProperty device=\"CCD\" name=\"IMAGE\"><oneBLOB format=\".fits\" size=\"4\">{}</oneBLOB></newProperty>",
+            STANDARD.encode(&data)
+        );
+        let msg = Message::from_xml(&xml).unwrap();
+
+        if let PropertyValue::Blob {
+            data: parsed_data,
+            format,
+            size,
+        } = msg.get_property_value().unwrap()
+        {
+            assert_eq!(parsed_data, data);
+            assert_eq!(format, ".fits");
+            assert_eq!(size, 4);
         } else {
             panic!("Wrong property value type");
         }

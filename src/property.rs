@@ -21,6 +21,12 @@ pub enum PropertyPerm {
     RW,
 }
 
+impl Default for PropertyPerm {
+    fn default() -> Self {
+        PropertyPerm::RO
+    }
+}
+
 impl FromStr for PropertyPerm {
     type Err = Error;
 
@@ -60,6 +66,12 @@ pub enum PropertyState {
     Alert,
 }
 
+impl Default for PropertyState {
+    fn default() -> Self {
+        PropertyState::Idle
+    }
+}
+
 impl FromStr for PropertyState {
     type Err = Error;
 
@@ -97,7 +109,14 @@ pub enum PropertyValue {
     /// Light value (represents device status)
     Light(PropertyState),
     /// BLOB value (Binary Large OBject)
-    Blob(Vec<u8>),
+    Blob {
+        /// The binary data
+        data: Vec<u8>,
+        /// The format of the data (e.g., ".fits", ".raw")
+        format: String,
+        /// Size of the data in bytes
+        size: usize,
+    },
 }
 
 impl fmt::Display for PropertyValue {
@@ -108,7 +127,7 @@ impl fmt::Display for PropertyValue {
             PropertyValue::Number(n, None) => write!(f, "{}", n),
             PropertyValue::Switch(b) => write!(f, "{}", if *b { "On" } else { "Off" }),
             PropertyValue::Light(s) => write!(f, "{}", s),
-            PropertyValue::Blob(b) => write!(f, "{} bytes", b.len()),
+            PropertyValue::Blob { data: _, format, size } => write!(f, "{} bytes ({})", size, format),
         }
     }
 }
@@ -220,7 +239,15 @@ mod tests {
         assert_eq!(PropertyValue::Number(42.0, None).to_string(), "42");
         assert_eq!(PropertyValue::Switch(true).to_string(), "On");
         assert_eq!(PropertyValue::Light(PropertyState::Ok).to_string(), "Ok");
-        assert_eq!(PropertyValue::Blob(vec![1, 2, 3]).to_string(), "3 bytes");
+        assert_eq!(
+            PropertyValue::Blob {
+                data: vec![1, 2, 3],
+                format: ".fits".to_string(),
+                size: 3
+            }
+            .to_string(),
+            "3 bytes (.fits)"
+        );
     }
 
     #[test]
