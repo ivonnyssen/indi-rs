@@ -39,7 +39,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
 
     info!("Getting properties...");
     let devices = client.get_devices().await?;
-    
+
     for device in devices {
         if let Some(properties) = client.get_device_properties(&device).await {
             info!("Device: {}", device);

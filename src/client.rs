@@ -81,7 +81,10 @@ impl Client {
     pub async fn connect(&self) -> Result<()> {
         // Send initial GetProperties message
         let message = Message::GetProperties("<getProperties version=\"1.7\"/>".to_string());
-        info!("Sending initial GetProperties message: {}", message.to_xml()?);
+        info!(
+            "Sending initial GetProperties message: {}",
+            message.to_xml()?
+        );
         self.write_message(&message).await?;
         Ok(())
     }
