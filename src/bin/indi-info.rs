@@ -1,5 +1,5 @@
 use clap::Parser;
-use indi_rs::client::Client;
+use indi_rs::client::{Client, ClientConfig};
 use std::error::Error;
 
 #[derive(Parser)]
@@ -19,7 +19,11 @@ async fn main() -> Result<(), Box<dyn Error>> {
     let args = Args::parse();
 
     println!("Connecting to INDI server at {}:{}", args.host, args.port);
-    let client = Client::connect(&args.host, args.port).await?;
+    let config = ClientConfig {
+        server_addr: format!("{}:{}", args.host, args.port),
+    };
+    let client = Client::new(config).await?;
+    client.connect().await?;
 
     println!("Getting properties...");
     let devices = client.get_devices().await?;

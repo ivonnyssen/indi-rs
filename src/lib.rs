@@ -13,6 +13,9 @@ pub mod error;
 /// according to the INDI protocol specification.
 pub mod message;
 pub mod property;
+/// Server implementation for the INDI protocol.
+/// This module provides functionality for running an INDI server that can handle
+/// device connections and property updates.
 pub mod server;
 
 /// Re-export of common types
@@ -21,7 +24,7 @@ pub mod prelude {
     pub use crate::error::Error;
     pub use crate::message::Message;
     pub use crate::property::{Property, PropertyPerm, PropertyState};
-    pub use crate::server::{DeviceDriver, Server, ServerConfig};
+    pub use crate::server::{Server, ServerConfig};
 }
 
 /// Result type for INDI operations
