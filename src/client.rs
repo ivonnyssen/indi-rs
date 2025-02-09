@@ -232,21 +232,55 @@ impl Client {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use tokio::io::AsyncWriteExt;
+    use tokio::net::TcpListener;
 
     #[tokio::test]
     async fn test_client() {
+        // Create a mock server
+        let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let addr = listener.local_addr().unwrap();
+
+        // Spawn mock server
+        tokio::spawn(async move {
+            let (socket, _) = listener.accept().await.unwrap();
+            let mut buf_reader = tokio::io::BufReader::new(socket);
+            let mut line = String::new();
+
+            // Read client message
+            buf_reader.read_line(&mut line).await.unwrap();
+            assert!(line.contains("getProperties"));
+
+            // Send mock response
+            let response = "<defTextVector device=\"MockDevice\" name=\"MockProp\" state=\"Ok\" perm=\"ro\"><defText>test</defText></defTextVector>\n";
+            buf_reader
+                .into_inner()
+                .write_all(response.as_bytes())
+                .await
+                .unwrap();
+        });
+
+        // Create client with mock server address
         let config = ClientConfig {
-            server_addr: "localhost:7624".to_string(),
+            server_addr: addr.to_string(),
         };
 
         let client = Client::new(config).await.expect("Failed to create client");
+        client.connect().await.expect("Failed to connect");
 
-        // Send getProperties message
-        let message = Message::GetProperties("<getProperties version=\"1.7\"/>".to_string());
-        client
-            .sender
-            .send(message)
-            .await
-            .expect("Failed to send message");
+        // Wait a bit for the server to process
+        tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
+
+        // Check if we got the mock device
+        let devices = client.get_devices().await.expect("Failed to get devices");
+        assert_eq!(devices.len(), 1);
+        assert_eq!(devices[0], "MockDevice");
+
+        if let Some(props) = client.get_device_properties("MockDevice").await {
+            assert_eq!(props.len(), 1);
+            assert!(props.contains_key("MockProp"));
+        } else {
+            panic!("No properties found for MockDevice");
+        }
     }
 }
