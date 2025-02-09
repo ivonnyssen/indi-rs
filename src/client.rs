@@ -57,6 +57,21 @@ impl Client {
         Ok(Self { state, sender })
     }
 
+    /// Connect to an INDI server
+    pub async fn connect(host: &str, port: u16) -> Result<Self> {
+        use std::net::ToSocketAddrs;
+        let addr = (host, port)
+            .to_socket_addrs()?
+            .next()
+            .ok_or_else(|| Error::Message("Invalid address".to_string()))?;
+        
+        let config = ClientConfig {
+            server_addr: addr,
+        };
+        
+        Self::new(config).await
+    }
+
     /// Set property value
     pub async fn set_property(
         &self,
@@ -99,6 +114,23 @@ impl Client {
             device, state.devices
         );
         state.devices.get(device).cloned()
+    }
+
+    /// Get all devices
+    pub async fn get_devices(&self) -> Result<Vec<String>> {
+        // Send getProperties message to get all devices
+        let message = Message::GetProperty("<getProperties version=\"1.7\"/>".to_string());
+        self.sender
+            .send(message)
+            .await
+            .map_err(|_| Error::Message("Failed to send message: channel closed".to_string()))?;
+
+        // Wait a bit for the server to respond
+        tokio::time::sleep(tokio::time::Duration::from_millis(500)).await;
+
+        // Get current devices
+        let state = self.state.lock().await;
+        Ok(state.devices.keys().cloned().collect())
     }
 
     /// Connection handler task
