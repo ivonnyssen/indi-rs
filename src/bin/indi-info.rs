@@ -1,7 +1,7 @@
 use clap::Parser;
 use indi_rs::client::{Client, ClientConfig};
 use std::error::Error;
-use tracing::{info, Level};
+use tracing::info;
 use tracing_subscriber::fmt;
 
 #[derive(Parser)]
@@ -19,14 +19,7 @@ struct Args {
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
     // Initialize tracing
-    fmt::Subscriber::builder()
-        .with_max_level(Level::DEBUG)
-        .with_target(false)
-        .with_thread_ids(true)
-        .with_line_number(true)
-        .with_file(true)
-        .pretty()
-        .init();
+    fmt::init();
 
     let args = Args::parse();
 
