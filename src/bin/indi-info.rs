@@ -30,7 +30,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
         println!("\nFound {} devices:", devices.len());
         for device in devices {
             println!("\nDevice: {}", device);
-            
+
             if let Some(props) = client.get_device_properties(&device).await {
                 for prop in props.values() {
                     println!("  Property: {} ({:?})", prop.name, prop.state);

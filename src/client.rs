@@ -64,11 +64,9 @@ impl Client {
             .to_socket_addrs()?
             .next()
             .ok_or_else(|| Error::Message("Invalid address".to_string()))?;
-        
-        let config = ClientConfig {
-            server_addr: addr,
-        };
-        
+
+        let config = ClientConfig { server_addr: addr };
+
         Self::new(config).await
     }
 
