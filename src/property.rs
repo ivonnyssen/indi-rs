@@ -91,21 +91,27 @@ impl fmt::Display for PropertyState {
 pub enum PropertyValue {
     /// Text value
     Text(String),
-    /// Number value with format
+    /// Number value with optional format
     Number(f64, Option<String>),
     /// Switch value (on/off)
     Switch(bool),
-    /// Light value (represents device status)
+    /// Light value (state)
     Light(PropertyState),
-    /// BLOB value (Binary Large OBject)
+    /// Binary large object
     Blob {
-        /// The binary data
-        data: Vec<u8>,
-        /// The format of the data (e.g., ".fits", ".raw")
+        /// Format of the blob
         format: String,
-        /// Size of the data in bytes
+        /// Binary data
+        data: Vec<u8>,
+        /// Size of the data
         size: usize,
     },
+}
+
+impl Default for PropertyValue {
+    fn default() -> Self {
+        Self::Text(String::default())
+    }
 }
 
 impl fmt::Display for PropertyValue {

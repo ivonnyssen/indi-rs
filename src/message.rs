@@ -106,9 +106,11 @@ impl FromStr for Message {
             || xml.starts_with("<defBLOBVector")
         {
             let device = parse_attribute(xml, "device")
-                .ok_or_else(|| Error::ParseError("Missing device attribute".into()))?;
+                .or_else(|| parse_attribute(xml, "name"))
+                .unwrap_or_default();
             let name = parse_attribute(xml, "name")
-                .ok_or_else(|| Error::ParseError("Missing name attribute".into()))?;
+                .or_else(|| parse_attribute(xml, "device"))
+                .unwrap_or_default();
             let state = parse_attribute(xml, "state")
                 .map(|s| PropertyState::from_str(&s).unwrap_or(PropertyState::Idle))
                 .unwrap_or(PropertyState::Idle);
@@ -120,32 +122,32 @@ impl FromStr for Message {
             let value = if xml.contains("<oneText") || xml.contains("<defText") {
                 let text = parse_element_content(xml, "oneText")
                     .or_else(|| parse_element_content(xml, "defText"))
-                    .unwrap_or_else(|| "".to_string());
+                    .unwrap_or_default();
                 PropertyValue::Text(text)
             } else if xml.contains("<oneNumber") || xml.contains("<defNumber") {
                 let num_str = parse_element_content(xml, "oneNumber")
                     .or_else(|| parse_element_content(xml, "defNumber"))
-                    .unwrap_or_else(|| "0".to_string());
+                    .unwrap_or_default();
                 let num = num_str.parse().unwrap_or(0.0);
                 PropertyValue::Number(num, None)
             } else if xml.contains("<oneSwitch") || xml.contains("<defSwitch") {
                 let switch = parse_element_content(xml, "oneSwitch")
                     .or_else(|| parse_element_content(xml, "defSwitch"))
-                    .unwrap_or_else(|| "Off".to_string());
+                    .unwrap_or_default();
                 PropertyValue::Switch(switch == "On")
             } else if xml.contains("<oneLight") || xml.contains("<defLight") {
                 let state_str = parse_element_content(xml, "oneLight")
                     .or_else(|| parse_element_content(xml, "defLight"))
-                    .unwrap_or_else(|| "Idle".to_string());
+                    .unwrap_or_default();
                 let state = PropertyState::from_str(&state_str).unwrap_or(PropertyState::Idle);
                 PropertyValue::Light(state)
             } else if xml.contains("<oneBLOB") || xml.contains("<defBLOB") {
-                let format = parse_attribute(xml, "format").unwrap_or_else(|| "".to_string());
-                let size_str = parse_attribute(xml, "size").unwrap_or_else(|| "0".to_string());
+                let format = parse_attribute(xml, "format").unwrap_or_default();
+                let size_str = parse_attribute(xml, "size").unwrap_or_default();
                 let size: usize = size_str.parse().unwrap_or(0);
                 let data_str = parse_element_content(xml, "oneBLOB")
                     .or_else(|| parse_element_content(xml, "defBLOB"))
-                    .unwrap_or_else(|| "".to_string());
+                    .unwrap_or_default();
                 let data = STANDARD.decode(data_str).unwrap_or_default();
                 PropertyValue::Blob { format, data, size }
             } else {
@@ -159,9 +161,11 @@ impl FromStr for Message {
             Ok(Message::SetProperty(xml.to_string()))
         } else if xml.starts_with("<newProperty") {
             let device = parse_attribute(xml, "device")
-                .ok_or_else(|| Error::ParseError("Missing device attribute".into()))?;
+                .or_else(|| parse_attribute(xml, "name"))
+                .unwrap_or_default();
             let name = parse_attribute(xml, "name")
-                .ok_or_else(|| Error::ParseError("Missing name attribute".into()))?;
+                .or_else(|| parse_attribute(xml, "device"))
+                .unwrap_or_default();
             let state = parse_attribute(xml, "state")
                 .map(|s| PropertyState::from_str(&s).unwrap_or(PropertyState::Idle))
                 .unwrap_or(PropertyState::Idle);
@@ -184,7 +188,7 @@ impl FromStr for Message {
                         .and_then(|s| PropertyState::from_str(&s).ok())
                         .map(PropertyValue::Light)
                 })
-                .ok_or_else(|| Error::ParseError("Missing property value".into()))?;
+                .unwrap_or_default();
 
             Ok(Message::NewProperty(Property::new(
                 device, name, value, state, perm,

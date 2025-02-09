@@ -134,7 +134,7 @@ impl Server {
             for (_device, props) in state.properties.iter() {
                 for prop in props.values() {
                     let message = Message::DefProperty(prop.clone());
-                    if let Ok(_) = message.to_xml() {
+                    if message.to_xml().is_ok() {
                         // Send message
                     }
                 }
@@ -144,7 +144,7 @@ impl Server {
             if let Some(props) = state.properties.get(&device) {
                 for prop in props.values() {
                     let message = Message::DefProperty(prop.clone());
-                    if let Ok(_) = message.to_xml() {
+                    if message.to_xml().is_ok() {
                         // Send message
                     }
                 }
@@ -186,7 +186,7 @@ impl Server {
 
                 // Send NewProperty message
                 let message = Message::NewProperty(prop.clone());
-                if let Ok(_) = message.to_xml() {
+                if message.to_xml().is_ok() {
                     // Send message
                 }
             }
