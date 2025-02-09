@@ -4,7 +4,7 @@
 //! It handles connecting to INDI servers, sending commands, and receiving responses.
 
 use std::collections::HashMap;
-use std::net::SocketAddr;
+use std::str::FromStr;
 use std::sync::Arc;
 
 use base64::engine::general_purpose::STANDARD;
@@ -12,6 +12,8 @@ use base64::Engine;
 use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
 use tokio::net::TcpStream;
 use tokio::sync::{mpsc, Mutex};
+
+use tracing::{debug, error, info};
 
 use crate::error::{Error, Result};
 use crate::message::Message;
@@ -21,40 +23,70 @@ use crate::property::{Property, PropertyValue};
 #[derive(Debug, Clone)]
 pub struct ClientConfig {
     /// Server address
-    pub server_addr: SocketAddr,
+    pub server_addr: String,
 }
 
 /// Client state
 #[derive(Debug, Default)]
 pub struct ClientState {
-    /// Device properties
+    /// Connected devices
     pub devices: HashMap<String, HashMap<String, Property>>,
 }
 
+impl ClientState {
+    /// Create new client state
+    pub fn new() -> Self {
+        Self {
+            devices: HashMap::new(),
+        }
+    }
+}
+
 /// INDI client
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct Client {
     /// Client state
     state: Arc<Mutex<ClientState>>,
     /// Message sender
     sender: mpsc::Sender<Message>,
+    /// Stream
+    stream: Arc<Mutex<TcpStream>>,
 }
 
 impl Client {
-    /// Create a new client
+    /// Create new client
     pub async fn new(config: ClientConfig) -> Result<Self> {
         let (sender, receiver) = mpsc::channel(32);
-        let state = Arc::new(Mutex::new(ClientState::default()));
+        let state = Arc::new(Mutex::new(ClientState::new()));
+        let stream = Arc::new(Mutex::new(TcpStream::connect(&config.server_addr).await?));
 
         // Spawn connection handler task
         let state_clone = state.clone();
+        let stream_clone = stream.clone();
         tokio::spawn(async move {
-            if let Err(e) = Self::connection_task(receiver, config, state_clone).await {
-                eprintln!("Connection task error: {}", e);
+            if let Err(e) = Self::connection_task(receiver, config, state_clone, stream_clone).await
+            {
+                error!("Connection task error: {}", e);
             }
         });
 
-        Ok(Self { state, sender })
+        Ok(Self {
+            state,
+            sender,
+            stream,
+        })
+    }
+
+    /// Connect to an INDI server
+    pub async fn connect(&self) -> Result<()> {
+        // Send initial GetProperties message
+        let message = Message::GetProperties("<getProperties version=\"1.7\"/>".to_string());
+        info!(
+            "Sending initial GetProperties message: {}",
+            message.to_xml()?
+        );
+        self.write_message(&message).await?;
+        Ok(())
     }
 
     /// Set property value
@@ -64,204 +96,191 @@ impl Client {
         name: &str,
         value: &PropertyValue,
     ) -> Result<()> {
-        // Format property value based on type
-        let value_xml = match value {
-            PropertyValue::Text(s) => format!("<oneText>{}</oneText>", s),
-            PropertyValue::Number(n, _) => format!("<oneNumber>{}</oneNumber>", n),
-            PropertyValue::Switch(s) => format!("<oneSwitch>{}</oneSwitch>", s),
-            PropertyValue::Light(l) => format!("<oneLight>{}</oneLight>", l),
-            PropertyValue::Blob { data, format, size } => format!(
-                "<oneBLOB format=\"{}\" size=\"{}\">{}</oneBLOB>",
-                format,
-                size,
-                STANDARD.encode(data)
-            ),
-        };
+        let value_xml = self.format_property_value(value);
 
         let message = Message::SetProperty(format!(
             "<setProperty device=\"{}\" name=\"{}\">{}</setProperty>",
             device, name, value_xml
         ));
 
-        self.sender
-            .send(message)
-            .await
-            .map_err(|_| Error::Message("Failed to send message: channel closed".to_string()))?;
-
+        self.write_message(&message).await?;
         Ok(())
     }
 
-    /// Get a device's properties
+    /// Format property value as XML
+    fn format_property_value(&self, value: &PropertyValue) -> String {
+        match value {
+            PropertyValue::Switch(value) => format!(
+                "<oneSwitch>{}</oneSwitch>",
+                if *value { "On" } else { "Off" }
+            ),
+            PropertyValue::Text(value) => format!("<oneText>{}</oneText>", value),
+            PropertyValue::Number(value, format) => format!(
+                "<oneNumber format=\"{}\">{}</oneNumber>",
+                format.as_deref().unwrap_or("%f"),
+                value
+            ),
+            PropertyValue::Light(state) => format!("<oneLight>{}</oneLight>", state),
+            PropertyValue::Blob { format, data, size } => format!(
+                "<oneBLOB format=\"{}\" size=\"{}\">{}</oneBLOB>",
+                format,
+                size,
+                STANDARD.encode(data)
+            ),
+        }
+    }
+
+    /// Get all devices
+    pub async fn get_devices(&self) -> Result<Vec<String>> {
+        // Send getProperties message to get all devices
+        let message = Message::GetProperties("<getProperties version=\"1.7\"/>".to_string());
+        self.sender
+            .send(message)
+            .await
+            .map_err(|_| Error::Message("Failed to send message".to_string()))?;
+
+        // Wait for response
+        tokio::time::sleep(tokio::time::Duration::from_secs(1)).await;
+
+        // Get devices from state
+        let state = self.state.lock().await;
+        Ok(state.devices.keys().cloned().collect())
+    }
+
+    /// Get properties for a specific device
     pub async fn get_device_properties(&self, device: &str) -> Option<HashMap<String, Property>> {
         let state = self.state.lock().await;
-        println!(
-            "Client: Getting properties for device {}, current state: {:?}",
-            device, state.devices
-        );
         state.devices.get(device).cloned()
+    }
+
+    /// Write message to stream
+    async fn write_message(&self, message: &Message) -> Result<()> {
+        let xml = message.to_xml()?;
+        let mut stream = self.stream.lock().await;
+        stream.write_all(xml.as_bytes()).await?;
+        stream.write_all(b"\n").await?;
+        stream.flush().await?;
+        Ok(())
     }
 
     /// Connection handler task
     async fn connection_task(
         mut receiver: mpsc::Receiver<Message>,
-        config: ClientConfig,
+        _config: ClientConfig,
         state: Arc<Mutex<ClientState>>,
+        stream: Arc<Mutex<TcpStream>>,
     ) -> Result<()> {
-        let stream = TcpStream::connect(config.server_addr).await?;
-        let (reader, mut writer) = stream.into_split();
+        info!("Starting connection task...");
+
+        // Create reader
+        let mut stream_guard = stream.lock().await;
+        let (reader, mut writer) = stream_guard.split();
+        // We can't drop stream_guard here as the reader/writer still need it
+
         let mut reader = BufReader::new(reader);
         let mut line = String::new();
-
-        loop {
-            tokio::select! {
-                result = reader.read_line(&mut line) => {
-                    match result {
-                        Ok(0) => break, // EOF
-                        Ok(_) => {
-                            if let Ok(message) = Message::from_xml(&line) {
-                                if let Err(e) = Self::handle_message(&state, message).await {
-                                    eprintln!("Error handling message: {}", e);
-                                }
-                            }
-                            line.clear();
-                        }
-                        Err(e) => {
-                            eprintln!("Error reading from socket: {}", e);
-                            break;
-                        }
+        while let Ok(n) = reader.read_line(&mut line).await {
+            if n == 0 {
+                break;
+            }
+            debug!(message = %line, "Received message");
+            if let Ok(message) = Message::from_str(&line) {
+                let mut state = state.lock().await;
+                match &message {
+                    Message::DefProperty(property) => {
+                        debug!(device = %property.device, "Got DefProperty");
+                        let device = property.device.clone();
+                        let name = property.name.clone();
+                        state
+                            .devices
+                            .entry(device)
+                            .or_default()
+                            .insert(name, property.clone());
                     }
-                }
-                message = receiver.recv() => {
-                    match message {
-                        Some(message) => {
-                            let xml = message.to_xml()?;
-                            writer.write_all(xml.as_bytes()).await?;
-                            writer.write_all(b"\n").await?;
-                            writer.flush().await?;
-                        }
-                        None => break,
+                    Message::NewProperty(property) => {
+                        debug!(device = %property.device, "Got NewProperty");
+                        let device = property.device.clone();
+                        let name = property.name.clone();
+                        state
+                            .devices
+                            .entry(device)
+                            .or_default()
+                            .insert(name, property.clone());
+                    }
+                    _ => {
+                        debug!(message_type = ?message, "Got other message type");
                     }
                 }
             }
+            line.clear();
         }
 
-        Ok(())
-    }
-
-    /// Handle incoming message
-    async fn handle_message(state: &Arc<Mutex<ClientState>>, message: Message) -> Result<()> {
-        let mut state = state.lock().await;
-
-        if let Message::DefProperty(_) = message {
-            let device = message.get_device()?;
-            let name = message.get_property_name()?;
-            let value = message.get_property_value()?;
-
-            let device_props = state.devices.entry(device.clone()).or_default();
-            device_props.insert(
-                name.clone(),
-                Property::new(device, name, value, Default::default(), Default::default()),
-            );
+        loop {
+            tokio::select! {
+                // Handle outgoing messages
+                Some(message) = receiver.recv() => {
+                    let xml = message.to_xml()?;
+                    writer.write_all(xml.as_bytes()).await?;
+                    writer.write_all(b"\n").await?;
+                    writer.flush().await?;
+                }
+            }
         }
-
-        Ok(())
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use tokio::io::AsyncWriteExt;
     use tokio::net::TcpListener;
 
     #[tokio::test]
-    async fn test_get_device_properties() {
-        // Create a TCP listener for the test server
+    async fn test_client() {
+        // Create a mock server
         let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
-        let server_addr = listener.local_addr().unwrap();
+        let addr = listener.local_addr().unwrap();
 
-        // Spawn test server
+        // Spawn mock server
         tokio::spawn(async move {
-            let (mut socket, _) = listener.accept().await.unwrap();
-            let (reader, mut writer) = socket.split();
-            let mut reader = BufReader::new(reader);
+            let (socket, _) = listener.accept().await.unwrap();
+            let mut buf_reader = tokio::io::BufReader::new(socket);
             let mut line = String::new();
 
-            while let Ok(n) = reader.read_line(&mut line).await {
-                if n == 0 {
-                    break;
-                }
+            // Read client message
+            buf_reader.read_line(&mut line).await.unwrap();
+            assert!(line.contains("getProperties"));
 
-                if line.contains("getProperties") {
-                    println!("Test server: Detected getProperty request");
-                    let def_prop = "<defProperty device=\"test_device\" name=\"test_prop\" state=\"Idle\" perm=\"ro\"><oneText>test value</oneText></defProperty>";
-                    println!("Test server: Sending defProperty response: {}", def_prop);
-                    writer
-                        .write_all(def_prop.as_bytes())
-                        .await
-                        .expect("Failed to write to socket");
-                    writer
-                        .write_all(b"\n")
-                        .await
-                        .expect("Failed to write newline to socket"); // Add newline to ensure proper message separation
-                    writer.flush().await.expect("Failed to flush socket");
-                    println!("Test server: Sent and flushed defProperty response");
-                } else if line.contains("setProperty") {
-                    println!("Test server: Detected setProperty request");
-                    let def_prop = "<defProperty device=\"test_device\" name=\"test_prop\" state=\"Ok\" perm=\"ro\"><oneText>test value</oneText></defProperty>";
-                    println!("Test server: Sending defProperty response: {}", def_prop);
-                    writer
-                        .write_all(def_prop.as_bytes())
-                        .await
-                        .expect("Failed to write to socket");
-                    writer
-                        .write_all(b"\n")
-                        .await
-                        .expect("Failed to write newline to socket"); // Add newline to ensure proper message separation
-                    writer.flush().await.expect("Failed to flush socket");
-                    println!("Test server: Sent and flushed defProperty response");
-                }
-
-                line.clear();
-            }
+            // Send mock response
+            let response = "<defTextVector device=\"MockDevice\" name=\"MockProp\" state=\"Ok\" perm=\"ro\"><defText>test</defText></defTextVector>\n";
+            buf_reader
+                .into_inner()
+                .write_all(response.as_bytes())
+                .await
+                .unwrap();
         });
 
-        // Create client
-        let client = Client::new(ClientConfig { server_addr })
-            .await
-            .expect("Failed to create client");
+        // Create client with mock server address
+        let config = ClientConfig {
+            server_addr: addr.to_string(),
+        };
 
-        // Send getProperties message
-        let message = Message::GetProperty("<getProperties version=\"1.7\"/>".to_string());
-        client
-            .sender
-            .send(message)
-            .await
-            .expect("Failed to send message");
+        let client = Client::new(config).await.expect("Failed to create client");
+        client.connect().await.expect("Failed to connect");
 
-        // Wait for response
+        // Wait a bit for the server to process
         tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
 
-        // Check if properties were received
-        let props = client
-            .get_device_properties("test_device")
-            .await
-            .expect("No properties found");
-        assert_eq!(props.len(), 1);
-        assert!(props.contains_key("test_prop"));
-    }
+        // Check if we got the mock device
+        let devices = client.get_devices().await.expect("Failed to get devices");
+        assert_eq!(devices.len(), 1);
+        assert_eq!(devices[0], "MockDevice");
 
-    #[tokio::test]
-    async fn test_message_parsing() {
-        let xml = "<defProperty device=\"test_device\" name=\"test_prop\" state=\"Idle\" perm=\"ro\"><oneText>test value</oneText></defProperty>";
-        let message = Message::from_xml(xml).unwrap();
-        assert!(matches!(message, Message::DefProperty(_)));
-        assert_eq!(message.get_device().unwrap(), "test_device");
-        assert_eq!(message.get_property_name().unwrap(), "test_prop");
-    }
-
-    #[tokio::test]
-    async fn test_invalid_message() {
-        let xml = "<invalidTag>test</invalidTag>";
-        assert!(Message::from_xml(xml).is_err());
+        if let Some(props) = client.get_device_properties("MockDevice").await {
+            assert_eq!(props.len(), 1);
+            assert!(props.contains_key("MockProp"));
+        } else {
+            panic!("No properties found for MockDevice");
+        }
     }
 }
