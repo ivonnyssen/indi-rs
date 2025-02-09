@@ -13,6 +13,8 @@ use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
 use tokio::net::TcpStream;
 use tokio::sync::{mpsc, Mutex};
 
+use tracing::{debug, error, info};
+
 use crate::error::{Error, Result};
 use crate::message::Message;
 use crate::property::{Property, PropertyValue};
@@ -64,7 +66,7 @@ impl Client {
         tokio::spawn(async move {
             if let Err(e) = Self::connection_task(receiver, config, state_clone, stream_clone).await
             {
-                eprintln!("Connection task error: {}", e);
+                error!("Connection task error: {}", e);
             }
         });
 
@@ -79,10 +81,7 @@ impl Client {
     pub async fn connect(&self) -> Result<()> {
         // Send initial GetProperties message
         let message = Message::GetProperties("<getProperties version=\"1.7\"/>".to_string());
-        println!(
-            "Sending initial GetProperties message: {}",
-            message.to_xml()?
-        );
+        info!("Sending initial GetProperties message: {}", message.to_xml()?);
         self.write_message(&message).await?;
         Ok(())
     }
@@ -168,7 +167,7 @@ impl Client {
         state: Arc<Mutex<ClientState>>,
         stream: Arc<Mutex<TcpStream>>,
     ) -> Result<()> {
-        println!("Starting connection task...");
+        info!("Starting connection task...");
 
         // Create reader
         let mut stream_guard = stream.lock().await;
@@ -181,12 +180,12 @@ impl Client {
             if n == 0 {
                 break;
             }
-            println!("Received: {}", line);
+            debug!(message = %line, "Received message");
             if let Ok(message) = Message::from_str(&line) {
                 let mut state = state.lock().await;
                 match &message {
                     Message::DefProperty(property) => {
-                        println!("Got DefProperty for device: {}", property.device);
+                        debug!(device = %property.device, "Got DefProperty");
                         let device = property.device.clone();
                         let name = property.name.clone();
                         state
@@ -196,7 +195,7 @@ impl Client {
                             .insert(name, property.clone());
                     }
                     Message::NewProperty(property) => {
-                        println!("Got NewProperty for device: {}", property.device);
+                        debug!(device = %property.device, "Got NewProperty");
                         let device = property.device.clone();
                         let name = property.name.clone();
                         state
@@ -206,7 +205,7 @@ impl Client {
                             .insert(name, property.clone());
                     }
                     _ => {
-                        println!("Got other message type: {:?}", message);
+                        debug!(message_type = ?message, "Got other message type");
                     }
                 }
             }

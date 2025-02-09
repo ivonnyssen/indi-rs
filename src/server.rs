@@ -2,6 +2,7 @@ use std::collections::HashMap;
 use std::net::SocketAddr;
 use std::str::FromStr;
 use std::sync::Arc;
+
 use tokio::io::{AsyncBufReadExt, BufReader};
 use tokio::net::{TcpListener, TcpStream};
 use tokio::sync::RwLock;
@@ -88,7 +89,7 @@ impl Server {
             }
 
             if let Ok(message) = Message::from_str(&line) {
-                debug!("Received message: {:?}", message);
+                debug!(message = ?message, "Received message");
                 if let Err(e) = self.handle_message(message).await {
                     error!("Failed to handle message: {}", e);
                 }
@@ -117,7 +118,7 @@ impl Server {
                 self.handle_new_property(property).await?;
             }
             Message::Message(msg) => {
-                println!("Received message: {}", msg);
+                info!("Received message: {}", msg);
             }
         }
         Ok(())
