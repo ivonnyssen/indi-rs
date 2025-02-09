@@ -10,7 +10,7 @@ struct Args {
     host: String,
 
     /// INDI server port
-    #[arg(short, long, default_value_t = 7624)]
+    #[arg(short = 'P', long, default_value_t = 7624)]
     port: u16,
 }
 
