@@ -6,7 +6,7 @@ use std::error::Error;
 #[command(author, version, about, long_about = None)]
 struct Args {
     /// INDI server host
-    #[arg(short, long, default_value = "localhost")]
+    #[arg(short = 'H', long, default_value = "localhost")]
     host: String,
 
     /// INDI server port
