@@ -19,6 +19,9 @@ use crate::error::{Error, Result};
 use crate::message::Message;
 use crate::property::{Property, PropertyValue};
 
+use quick_xml::events::{BytesStart, BytesText};
+use quick_xml::Writer;
+
 /// Client configuration
 #[derive(Debug, Clone)]
 pub struct ClientConfig {
@@ -109,25 +112,52 @@ impl Client {
 
     /// Format property value as XML
     fn format_property_value(&self, value: &PropertyValue) -> String {
+        let mut writer = Writer::new(Vec::new());
+        let elem_name = match value {
+            PropertyValue::Switch(_) => "oneSwitch",
+            PropertyValue::Text(_) => "oneText",
+            PropertyValue::Number(_, _) => "oneNumber",
+            PropertyValue::Light(_) => "oneLight",
+            PropertyValue::Blob { .. } => "oneBLOB",
+        };
+
+        let mut elem = BytesStart::new(elem_name);
+
         match value {
-            PropertyValue::Switch(value) => format!(
-                "<oneSwitch>{}</oneSwitch>",
-                if *value { "On" } else { "Off" }
-            ),
-            PropertyValue::Text(value) => format!("<oneText>{}</oneText>", value),
-            PropertyValue::Number(value, format) => format!(
-                "<oneNumber format=\"{}\">{}</oneNumber>",
-                format.as_deref().unwrap_or("%f"),
-                value
-            ),
-            PropertyValue::Light(state) => format!("<oneLight>{}</oneLight>", state),
-            PropertyValue::Blob { format, data, size } => format!(
-                "<oneBLOB format=\"{}\" size=\"{}\">{}</oneBLOB>",
-                format,
-                size,
-                STANDARD.encode(data)
-            ),
+            PropertyValue::Number(_, format) => {
+                elem.push_attribute(("format", format.as_deref().unwrap_or("%f")));
+            }
+            PropertyValue::Blob { format, size, .. } => {
+                elem.push_attribute(("format", format.to_string().as_str()));
+                elem.push_attribute(("size", size.to_string().as_str()));
+            }
+            _ => {}
         }
+
+        writer.write_event(quick_xml::events::Event::Start(elem.clone())).unwrap();
+
+        match value {
+            PropertyValue::Switch(value) => {
+                let content = if *value { "On" } else { "Off" };
+                writer.write_event(quick_xml::events::Event::Text(BytesText::new(content))).unwrap();
+            }
+            PropertyValue::Text(value) => {
+                writer.write_event(quick_xml::events::Event::Text(BytesText::new(value))).unwrap();
+            }
+            PropertyValue::Number(value, _) => {
+                writer.write_event(quick_xml::events::Event::Text(BytesText::new(&value.to_string()))).unwrap();
+            }
+            PropertyValue::Light(state) => {
+                writer.write_event(quick_xml::events::Event::Text(BytesText::new(state.to_string().as_str()))).unwrap();
+            }
+            PropertyValue::Blob { data, .. } => {
+                let encoded = STANDARD.encode(data);
+                writer.write_event(quick_xml::events::Event::Text(BytesText::new(&encoded))).unwrap();
+            }
+        }
+
+        writer.write_event(quick_xml::events::Event::End(elem.to_end())).unwrap();
+        String::from_utf8(writer.into_inner()).unwrap()
     }
 
     /// Get all devices

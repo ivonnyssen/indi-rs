@@ -48,10 +48,9 @@ impl fmt::Display for PropertyPerm {
 }
 
 /// Property state
-#[derive(Debug, Clone, Copy, PartialEq, Default)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum PropertyState {
     /// Property is idle
-    #[default]
     Idle,
     /// Property is ok
     Ok,

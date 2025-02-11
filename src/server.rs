@@ -12,6 +12,9 @@ use crate::error::{Error, Result};
 use crate::message::Message;
 use crate::property::{Property, PropertyState, PropertyValue};
 
+use quick_xml::events::Event;
+use quick_xml::Reader;
+
 /// Default INDI server port
 pub const DEFAULT_PORT: u16 = 7624;
 
@@ -222,26 +225,54 @@ impl Server {
 }
 
 fn parse_attribute(xml: &str, attr: &str) -> Option<String> {
-    let attr_str = format!("{}=\"", attr);
-    if let Some(attr_pos) = xml.find(&attr_str) {
-        let start = attr_pos + attr_str.len();
-        if let Some(end) = xml[start..].find('"') {
-            return Some(xml[start..start + end].to_string());
+    let mut reader = Reader::from_str(xml);
+    reader.trim_text(true);
+
+    let mut buf = Vec::new();
+    loop {
+        match reader.read_event_into(&mut buf) {
+            Ok(Event::Start(e)) | Ok(Event::Empty(e)) => {
+                for attribute in e.attributes().flatten() {
+                    if attribute.key.as_ref() == attr.as_bytes() {
+                        return Some(attribute.unescape_value().unwrap().to_string());
+                    }
+                }
+            }
+            Ok(Event::Eof) => break,
+            _ => {}
         }
+        buf.clear();
     }
     None
 }
 
 fn parse_element_content(xml: &str, element: &str) -> Option<String> {
-    // Simple XML element content parsing
-    let element_str = format!("<{}>", element);
-    if let Some(element_pos) = xml.find(&element_str) {
-        let start = element_pos + element_str.len();
-        let end = xml[start..]
-            .find(&format!("</{}>", element))
-            .unwrap_or(xml.len() - start);
-        Some(xml[start..start + end].trim().to_string())
-    } else {
-        None
+    let mut reader = Reader::from_str(xml);
+    reader.trim_text(true);
+
+    let mut buf = Vec::new();
+    let mut content = String::new();
+    let mut in_target_element = false;
+
+    loop {
+        match reader.read_event_into(&mut buf) {
+            Ok(Event::Start(e)) => {
+                if e.name().as_ref() == element.as_bytes() {
+                    in_target_element = true;
+                }
+            }
+            Ok(Event::Text(e)) if in_target_element => {
+                content.push_str(&e.unescape().unwrap());
+            }
+            Ok(Event::End(e)) => {
+                if e.name().as_ref() == element.as_bytes() {
+                    return Some(content);
+                }
+            }
+            Ok(Event::Eof) => break,
+            _ => {}
+        }
+        buf.clear();
     }
+    None
 }
