@@ -134,29 +134,47 @@ impl Client {
             _ => {}
         }
 
-        writer.write_event(quick_xml::events::Event::Start(elem.clone())).unwrap();
+        writer
+            .write_event(quick_xml::events::Event::Start(elem.clone()))
+            .unwrap();
 
         match value {
             PropertyValue::Switch(value) => {
                 let content = if *value { "On" } else { "Off" };
-                writer.write_event(quick_xml::events::Event::Text(BytesText::new(content))).unwrap();
+                writer
+                    .write_event(quick_xml::events::Event::Text(BytesText::new(content)))
+                    .unwrap();
             }
             PropertyValue::Text(value) => {
-                writer.write_event(quick_xml::events::Event::Text(BytesText::new(value))).unwrap();
+                writer
+                    .write_event(quick_xml::events::Event::Text(BytesText::new(value)))
+                    .unwrap();
             }
             PropertyValue::Number(value, _) => {
-                writer.write_event(quick_xml::events::Event::Text(BytesText::new(&value.to_string()))).unwrap();
+                writer
+                    .write_event(quick_xml::events::Event::Text(BytesText::new(
+                        &value.to_string(),
+                    )))
+                    .unwrap();
             }
             PropertyValue::Light(state) => {
-                writer.write_event(quick_xml::events::Event::Text(BytesText::new(state.to_string().as_str()))).unwrap();
+                writer
+                    .write_event(quick_xml::events::Event::Text(BytesText::new(
+                        state.to_string().as_str(),
+                    )))
+                    .unwrap();
             }
             PropertyValue::Blob { data, .. } => {
                 let encoded = STANDARD.encode(data);
-                writer.write_event(quick_xml::events::Event::Text(BytesText::new(&encoded))).unwrap();
+                writer
+                    .write_event(quick_xml::events::Event::Text(BytesText::new(&encoded)))
+                    .unwrap();
             }
         }
 
-        writer.write_event(quick_xml::events::Event::End(elem.to_end())).unwrap();
+        writer
+            .write_event(quick_xml::events::Event::End(elem.to_end()))
+            .unwrap();
         String::from_utf8(writer.into_inner()).unwrap()
     }
 

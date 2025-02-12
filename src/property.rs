@@ -203,7 +203,9 @@ impl Property {
     /// Serializes the property to XML
     pub fn to_xml(&self) -> Result<String> {
         let mut writer = quick_xml::Writer::new(Vec::new());
-        let _ = writer.write_event(quick_xml::events::Event::Decl(quick_xml::events::BytesDecl::new("1.0", Some("UTF-8"), None)));
+        let _ = writer.write_event(quick_xml::events::Event::Decl(
+            quick_xml::events::BytesDecl::new("1.0", Some("UTF-8"), None),
+        ));
 
         let mut root = quick_xml::events::BytesStart::new("property");
         root.push_attribute(("device", self.device.as_str()));
@@ -215,19 +217,29 @@ impl Property {
         if let Some(label) = &self.label {
             let label_element = quick_xml::events::BytesStart::new("label");
             let _ = writer.write_event(quick_xml::events::Event::Start(label_element));
-            let _ = writer.write_event(quick_xml::events::Event::Text(quick_xml::events::BytesText::new(label)));
-            let _ = writer.write_event(quick_xml::events::Event::End(quick_xml::events::BytesEnd::new("label")));
+            let _ = writer.write_event(quick_xml::events::Event::Text(
+                quick_xml::events::BytesText::new(label),
+            ));
+            let _ = writer.write_event(quick_xml::events::Event::End(
+                quick_xml::events::BytesEnd::new("label"),
+            ));
         }
 
         // Add group
         if let Some(group) = &self.group {
             let group_element = quick_xml::events::BytesStart::new("group");
             let _ = writer.write_event(quick_xml::events::Event::Start(group_element));
-            let _ = writer.write_event(quick_xml::events::Event::Text(quick_xml::events::BytesText::new(group)));
-            let _ = writer.write_event(quick_xml::events::Event::End(quick_xml::events::BytesEnd::new("group")));
+            let _ = writer.write_event(quick_xml::events::Event::Text(
+                quick_xml::events::BytesText::new(group),
+            ));
+            let _ = writer.write_event(quick_xml::events::Event::End(
+                quick_xml::events::BytesEnd::new("group"),
+            ));
         }
 
-        let _ = writer.write_event(quick_xml::events::Event::End(quick_xml::events::BytesEnd::new("property")));
+        let _ = writer.write_event(quick_xml::events::Event::End(
+            quick_xml::events::BytesEnd::new("property"),
+        ));
 
         let result = writer.into_inner();
         String::from_utf8(result).map_err(|e| Error::Xml(e.to_string()))

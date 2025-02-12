@@ -1,10 +1,10 @@
 use clap::Parser;
-use indi_rs::client::{Client, ClientConfig};
-use indi_rs::property::{PropertyValue, PropertyState};
-use std::error::Error;
-use tracing::{info, debug, Level};
-use tracing_subscriber;
 use colored::*;
+use indi_rs::client::{Client, ClientConfig};
+use indi_rs::property::{PropertyState, PropertyValue};
+use std::error::Error;
+use tracing::{debug, info, Level};
+use tracing_subscriber;
 
 #[derive(Parser)]
 #[command(author, version, about, long_about = None)]
@@ -35,8 +35,11 @@ fn format_property_value(value: &PropertyValue) -> String {
             PropertyState::Ok => "Ok".green(),
             PropertyState::Busy => "Busy".blue(),
             PropertyState::Alert => "Alert".red(),
-        }.to_string(),
-        PropertyValue::Blob { format, size, .. } => format!("[BLOB format={} size={}]", format, size),
+        }
+        .to_string(),
+        PropertyValue::Blob { format, size, .. } => {
+            format!("[BLOB format={} size={}]", format, size)
+        }
     }
 }
 
@@ -59,9 +62,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
             .with_max_level(Level::DEBUG)
             .init();
     } else {
-        tracing_subscriber::fmt()
-            .with_max_level(Level::INFO)
-            .init();
+        tracing_subscriber::fmt().with_max_level(Level::INFO).init();
     }
 
     info!("Connecting to INDI server at {}:{}", args.host, args.port);
@@ -80,13 +81,16 @@ async fn main() -> Result<(), Box<dyn Error>> {
             for (name, prop) in properties {
                 debug!("Raw property value for {}: {:?}", name, prop.value);
                 println!("  {}", name.bold());
-                println!("    Type: {}", match prop.value {
-                    PropertyValue::Text(_) => "Text",
-                    PropertyValue::Number(_, _) => "Number",
-                    PropertyValue::Switch(_) => "Switch",
-                    PropertyValue::Light(_) => "Light",
-                    PropertyValue::Blob { .. } => "BLOB",
-                });
+                println!(
+                    "    Type: {}",
+                    match prop.value {
+                        PropertyValue::Text(_) => "Text",
+                        PropertyValue::Number(_, _) => "Number",
+                        PropertyValue::Switch(_) => "Switch",
+                        PropertyValue::Light(_) => "Light",
+                        PropertyValue::Blob { .. } => "BLOB",
+                    }
+                );
                 println!("    Value: {}", format_property_value(&prop.value));
                 println!("    State: {}", format_property_state(&prop.state));
                 println!("    Permissions: {}", prop.perm.to_string().cyan());
