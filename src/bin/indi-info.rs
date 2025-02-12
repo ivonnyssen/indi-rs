@@ -74,85 +74,75 @@ async fn is_camera(client: &Client, device: &str) -> bool {
     }
 }
 
-/// Connect to a camera device
+/// Connect to a camera device and wait for it to be ready
 async fn connect_camera(client: &Client, device: &str) -> Result<bool, Box<dyn Error>> {
     info!("Attempting to connect to camera: {}", device);
     
-    // Get the CONNECTION property with timeout
-    match timeout(Duration::from_secs(5), client.get_device_properties(device)).await {
-        Ok(Some(properties)) => {
-            debug!("Got properties for {}", device);
-            if let Some(connection) = properties.get("CONNECTION") {
-                debug!("Found CONNECTION property for {}", device);
-                match &connection.value {
-                    PropertyValue::Switch(connected) => {
-                        if !connected {
-                            // Set the CONNECTION property to ON
-                            info!("Connecting to {}", device);
-                            match timeout(
-                                Duration::from_secs(5),
-                                client.set_property(device, "CONNECTION", &PropertyValue::Switch(true))
-                            ).await {
-                                Ok(result) => {
-                                    result?;
-                                    debug!("Set CONNECTION property for {}", device);
-                                    
-                                    // Wait a moment for the connection to establish
-                                    tokio::time::sleep(Duration::from_secs(1)).await;
-                                    
-                                    // Verify connection with timeout
-                                    match timeout(Duration::from_secs(5), client.get_device_properties(device)).await {
-                                        Ok(Some(updated_props)) => {
-                                            debug!("Got updated properties for {}", device);
-                                            if let Some(updated_conn) = updated_props.get("CONNECTION") {
-                                                if let PropertyValue::Switch(new_state) = &updated_conn.value {
-                                                    if *new_state {
-                                                        info!("Successfully connected to {}", device);
-                                                        return Ok(true);
-                                                    }
-                                                }
-                                            }
-                                            warn!("Failed to verify connection to {}", device);
-                                            Ok(false)
-                                        }
-                                        Ok(None) => {
-                                            warn!("No properties found when verifying connection to {}", device);
-                                            Ok(false)
-                                        }
-                                        Err(_) => {
-                                            warn!("Timeout while verifying connection to {}", device);
-                                            Ok(false)
-                                        }
+    // First, watch this specific device
+    debug!("Watching device {}", device);
+    client.watch_device(device).await?;
+    
+    // Wait for properties to be defined
+    debug!("Waiting for properties to be defined for {}", device);
+    let mut retries = 0;
+    let properties = loop {
+        if let Some(props) = client.get_device_properties(device).await {
+            if props.contains_key("CONNECTION") {
+                break props;
+            }
+        }
+        if retries >= 10 {
+            warn!("Timeout waiting for CONNECTION property from {}", device);
+            return Ok(false);
+        }
+        tokio::time::sleep(Duration::from_millis(500)).await;
+        retries += 1;
+    };
+    
+    debug!("Got properties for {}", device);
+    if let Some(connection) = properties.get("CONNECTION") {
+        debug!("Found CONNECTION property for {}", device);
+        match &connection.value {
+            PropertyValue::Switch(connected) => {
+                if !connected {
+                    // Set the CONNECTION property to ON
+                    info!("Connecting to {}", device);
+                    client.set_property(device, "CONNECTION", &PropertyValue::Switch(true)).await?;
+                    
+                    // Wait for the connection to be established
+                    debug!("Waiting for connection to be established");
+                    retries = 0;
+                    loop {
+                        if let Some(props) = client.get_device_properties(device).await {
+                            if let Some(conn) = props.get("CONNECTION") {
+                                if let PropertyValue::Switch(state) = &conn.value {
+                                    if *state {
+                                        info!("Successfully connected to {}", device);
+                                        return Ok(true);
                                     }
                                 }
-                                Err(_) => {
-                                    warn!("Timeout while setting CONNECTION property for {}", device);
-                                    Ok(false)
-                                }
                             }
-                        } else {
-                            info!("Device {} is already connected", device);
-                            Ok(true)
                         }
+                        if retries >= 20 {
+                            warn!("Timeout waiting for {} to connect", device);
+                            return Ok(false);
+                        }
+                        tokio::time::sleep(Duration::from_millis(500)).await;
+                        retries += 1;
                     }
-                    _ => {
-                        warn!("Unexpected CONNECTION property type for {}", device);
-                        Ok(false)
-                    }
+                } else {
+                    info!("Device {} is already connected", device);
+                    Ok(true)
                 }
-            } else {
-                warn!("No CONNECTION property found for {}", device);
+            }
+            _ => {
+                warn!("Unexpected CONNECTION property type for {}", device);
                 Ok(false)
             }
         }
-        Ok(None) => {
-            warn!("Could not get properties for {}", device);
-            Ok(false)
-        }
-        Err(_) => {
-            warn!("Timeout while getting properties for {}", device);
-            Ok(false)
-        }
+    } else {
+        warn!("No CONNECTION property found for {}", device);
+        Ok(false)
     }
 }
 
