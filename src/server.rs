@@ -108,11 +108,11 @@ impl Server {
     /// Handle incoming message
     async fn handle_message(&mut self, message: Message) -> Result<()> {
         match message {
-            Message::GetProperties(xml) => {
-                self.handle_get_properties(&xml).await?;
+            Message::GetProperties { content } => {
+                self.handle_get_properties(&content).await?;
             }
-            Message::SetProperty(xml) => {
-                self.handle_set_property(&xml).await?;
+            Message::SetProperty { content } => {
+                self.handle_set_property(&content).await?;
             }
             Message::DefProperty(property) => {
                 self.handle_def_property(property).await?;
@@ -120,8 +120,8 @@ impl Server {
             Message::NewProperty(property) => {
                 self.handle_new_property(property).await?;
             }
-            Message::Message(msg) => {
-                info!("Received message: {}", msg);
+            Message::Message { content } => {
+                info!("Received message: {}", content);
             }
         }
         Ok(())

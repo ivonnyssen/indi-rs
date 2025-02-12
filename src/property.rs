@@ -5,9 +5,9 @@
 //! types (Number, Text, Switch, etc.), states (Idle, OK, Busy, Alert),
 //! and permissions (RO, WO, RW).
 
+use serde::Serialize;
 use std::fmt;
 use std::str::FromStr;
-use serde::Serialize;
 
 use crate::error::{Error, Result};
 
@@ -206,7 +206,7 @@ impl Property {
     /// Create a new property with value
     pub fn new_with_value(
         device: String,
-        _name: String,  // Parent property name, unused in this context
+        _name: String, // Parent property name, unused in this context
         element_name: String,
         value: PropertyValue,
         state: PropertyState,
@@ -282,7 +282,8 @@ impl Property {
         use serde::Serialize;
         let mut writer = String::new();
         let ser = se::Serializer::new(&mut writer);
-        self.serialize(ser).map_err(|e| Error::SerializationError(e.to_string()))?;
+        self.serialize(ser)
+            .map_err(|e| Error::SerializationError(e.to_string()))?;
         Ok(writer)
     }
 }

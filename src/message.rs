@@ -1,8 +1,8 @@
 use base64::engine::general_purpose::STANDARD;
 use base64::Engine;
-use std::str::FromStr;
 use quick_xml::se::Serializer;
 use serde::Serialize;
+use std::str::FromStr;
 
 use crate::error::{Error, Result};
 use crate::property::{Property, PropertyPerm, PropertyState, PropertyValue};
@@ -12,12 +12,15 @@ use crate::property::{Property, PropertyPerm, PropertyState, PropertyValue};
 pub struct GetPropertiesMessage {
     /// Protocol version
     #[serde(rename = "@version")]
+    /// The version of the protocol being used.
     pub version: String,
     /// Device name (optional)
     #[serde(rename = "@device", skip_serializing_if = "Option::is_none")]
+    /// The name of the device being queried.
     pub device: Option<String>,
     /// Property name (optional)
     #[serde(rename = "@name", skip_serializing_if = "Option::is_none")]
+    /// The name of the property being queried.
     pub name: Option<String>,
 }
 
@@ -35,7 +38,8 @@ impl GetPropertiesMessage {
     pub fn to_xml(&self) -> Result<String> {
         let mut writer = String::new();
         let ser = Serializer::new(&mut writer);
-        self.serialize(ser).map_err(|e| Error::SerializationError(e.to_string()))?;
+        self.serialize(ser)
+            .map_err(|e| Error::SerializationError(e.to_string()))?;
         Ok(writer)
     }
 }
@@ -47,7 +51,9 @@ pub enum Message {
     /// GetProperties message
     #[serde(rename = "getProperties")]
     GetProperties {
+        /// Raw XML content of the message
         #[serde(rename = "$value")]
+        /// The raw XML content of the GetProperties message.
         content: String,
     },
     /// DefProperty message
@@ -56,7 +62,9 @@ pub enum Message {
     /// SetProperty message
     #[serde(rename = "setProperty")]
     SetProperty {
+        /// Raw XML content of the message
         #[serde(rename = "$value")]
+        /// The raw XML content of the SetProperty message.
         content: String,
     },
     /// NewProperty message
@@ -65,14 +73,20 @@ pub enum Message {
     /// Message message
     #[serde(rename = "message")]
     Message {
+        /// Raw XML content of the message
         #[serde(rename = "$value")]
+        /// The raw XML content of the Message message.
         content: String,
     },
 }
 
 impl Message {
     /// Create a new GetProperties message
-    pub fn get_properties(version: impl Into<String>, device: Option<String>, name: Option<String>) -> Self {
+    pub fn get_properties(
+        version: impl Into<String>,
+        device: Option<String>,
+        name: Option<String>,
+    ) -> Self {
         let msg = GetPropertiesMessage::new(version, device, name);
         Self::GetProperties {
             content: msg.to_xml().unwrap_or_default(),
@@ -83,7 +97,8 @@ impl Message {
     pub fn to_xml(&self) -> Result<String> {
         let mut writer = String::new();
         let ser = Serializer::new(&mut writer);
-        self.serialize(ser).map_err(|e| Error::SerializationError(e.to_string()))?;
+        self.serialize(ser)
+            .map_err(|e| Error::SerializationError(e.to_string()))?;
         Ok(writer)
     }
 
@@ -246,7 +261,11 @@ mod tests {
     #[test]
     fn test_parse_message() {
         // Test GetProperties with device and name
-        let msg = Message::get_properties("1.7", Some("CCD Simulator".to_string()), Some("CONNECTION".to_string()));
+        let msg = Message::get_properties(
+            "1.7",
+            Some("CCD Simulator".to_string()),
+            Some("CONNECTION".to_string()),
+        );
         let xml = msg.to_xml().unwrap();
         assert!(xml.contains("version=\"1.7\""));
         assert!(xml.contains("device=\"CCD Simulator\""));

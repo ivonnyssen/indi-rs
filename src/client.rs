@@ -134,7 +134,7 @@ impl Client {
                         name.to_string(),
                         element_name.to_string(),
                         PropertyValue::Switch(*state),
-                        PropertyState::Ok,  // Set state to Ok to indicate we're actively changing it
+                        PropertyState::Ok, // Set state to Ok to indicate we're actively changing it
                         PropertyPerm::ReadWrite,
                     );
                     props.push(prop);
@@ -152,7 +152,7 @@ impl Client {
             device.to_string(),
             name.to_string(),
             props,
-            PropertyState::Ok,  // Set state to Ok to indicate we're actively changing it
+            PropertyState::Ok, // Set state to Ok to indicate we're actively changing it
             PropertyPerm::ReadWrite,
         );
 
@@ -315,8 +315,14 @@ mod tests {
 
         // Test get_properties
         client.get_properties(None, None).await.unwrap();
-        client.get_properties(Some("CCD Simulator"), None).await.unwrap();
-        client.get_properties(Some("CCD Simulator"), Some("CONNECTION")).await.unwrap();
+        client
+            .get_properties(Some("CCD Simulator"), None)
+            .await
+            .unwrap();
+        client
+            .get_properties(Some("CCD Simulator"), Some("CONNECTION"))
+            .await
+            .unwrap();
 
         // Accept connection and verify messages
         let (mut socket, _) = listener.accept().await.unwrap();
