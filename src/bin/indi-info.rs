@@ -57,9 +57,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
 
     // Initialize tracing with debug if requested
     if args.debug {
-        tracing_subscriber::fmt()
-            .with_max_level(Level::DEBUG)
-            .init();
+        tracing_subscriber::fmt().with_max_level(Level::DEBUG).init();
     } else {
         tracing_subscriber::fmt().with_max_level(Level::INFO).init();
     }
@@ -76,9 +74,16 @@ async fn main() -> Result<(), Box<dyn Error>> {
 
     for device in devices {
         if let Some(properties) = client.get_device_properties(&device).await {
+            debug!(device = %device, property_count = %properties.len(), "Got device properties");
             println!("\n{}", format!("Device: {}", device).bold());
             for (name, prop) in properties {
-                debug!("Raw property value for {}: {:?}", name, prop.value);
+                debug!(
+                    property = %name,
+                    value = ?prop.value,
+                    state = ?prop.state,
+                    perm = %prop.perm,
+                    "Processing property"
+                );
                 println!("  {}", name.bold());
                 println!(
                     "    Type: {}",

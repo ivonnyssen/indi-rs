@@ -208,10 +208,10 @@ impl Server {
         loop {
             match reader.read_event_into(&mut buf) {
                 Ok(Event::Start(ref e)) => {
-                    println!("Start: {:?}", e);
+                    debug!(event = ?e, "XML Start event");
                 }
                 Ok(Event::End(ref e)) => {
-                    println!("End: {:?}", e);
+                    debug!(event = ?e, "XML End event");
                 }
                 Ok(Event::Eof) => break,
                 Err(e) => {
