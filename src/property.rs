@@ -5,23 +5,24 @@
 //! types (Number, Text, Switch, etc.), states (Idle, OK, Busy, Alert),
 //! and permissions (RO, WO, RW).
 
-use crate::error::{Error, Result};
 use std::fmt;
 use std::str::FromStr;
 use serde::Serialize;
+
+use crate::error::{Error, Result};
 
 /// Property permission
 #[derive(Debug, Clone, Copy, PartialEq, Default, Serialize)]
 #[serde(rename_all = "lowercase")]
 pub enum PropertyPerm {
-    /// Read-only
+    /// Read-only permission
     #[default]
     #[serde(rename = "ro")]
     ReadOnly,
-    /// Write-only
+    /// Write-only permission
     #[serde(rename = "wo")]
     WriteOnly,
-    /// Read-write
+    /// Read-write permission
     #[serde(rename = "rw")]
     ReadWrite,
 }
@@ -56,16 +57,16 @@ impl fmt::Display for PropertyPerm {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "lowercase")]
 pub enum PropertyState {
-    /// Idle state
+    /// Device/property is idle
     #[serde(rename = "Idle")]
     Idle,
-    /// OK state
+    /// Device/property is operating correctly
     #[serde(rename = "Ok")]
     Ok,
-    /// Busy state
+    /// Device/property is busy
     #[serde(rename = "Busy")]
     Busy,
-    /// Alert state
+    /// Device/property has an error condition
     #[serde(rename = "Alert")]
     Alert,
 }
@@ -114,9 +115,12 @@ pub enum PropertyValue {
     /// BLOB value
     #[serde(rename = "oneBLOB")]
     Blob {
+        /// Format of the BLOB data (e.g., ".fits", ".raw", etc.)
         format: String,
+        /// Binary data of the BLOB
         #[serde(serialize_with = "serialize_base64")]
         data: Vec<u8>,
+        /// Size of the binary data in bytes
         size: usize,
     },
 }
@@ -155,23 +159,23 @@ pub struct Property {
     #[serde(rename = "@name")]
     pub name: String,
     /// Property label (optional)
-    #[serde(rename = "@label", skip_serializing_if = "Option::is_none")]
+    #[serde(rename = "label", skip_serializing_if = "Option::is_none")]
     pub label: Option<String>,
     /// Property group (optional)
-    #[serde(rename = "@group", skip_serializing_if = "Option::is_none")]
+    #[serde(rename = "group", skip_serializing_if = "Option::is_none")]
     pub group: Option<String>,
+    /// Property value
+    #[serde(flatten)]
+    pub value: PropertyValue,
     /// Property state
     #[serde(rename = "@state")]
     pub state: PropertyState,
-    /// Property permission
+    /// Property permissions
     #[serde(rename = "@perm")]
     pub perm: PropertyPerm,
     /// Property timeout (optional)
     #[serde(rename = "@timeout", skip_serializing_if = "Option::is_none")]
     pub timeout: Option<u32>,
-    /// Property value
-    #[serde(flatten)]
-    pub value: PropertyValue,
     /// Child elements (optional)
     #[serde(rename = "elements", skip_serializing_if = "Option::is_none")]
     pub elements: Option<Vec<Property>>,
@@ -202,7 +206,7 @@ impl Property {
     /// Create a new property with value
     pub fn new_with_value(
         device: String,
-        name: String,
+        _name: String,  // Parent property name, unused in this context
         element_name: String,
         value: PropertyValue,
         state: PropertyState,
@@ -224,17 +228,17 @@ impl Property {
     /// Create a new property with elements
     pub fn new_with_elements(
         device: String,
-        name: String,
+        _name: String,
         elements: Vec<Property>,
         state: PropertyState,
         perm: PropertyPerm,
     ) -> Self {
         Self {
             device,
-            name,
+            name: String::default(),
             label: None,
             group: None,
-            value: PropertyValue::Switch(false), // Placeholder value
+            value: PropertyValue::default(),
             state,
             perm,
             timeout: None,
@@ -262,57 +266,24 @@ impl Property {
 
     /// Returns true if the property is readable
     pub fn is_readable(&self) -> bool {
+        use crate::property::PropertyPerm;
         matches!(self.perm, PropertyPerm::ReadOnly | PropertyPerm::ReadWrite)
     }
 
     /// Returns true if the property is writable
     pub fn is_writable(&self) -> bool {
+        use crate::property::PropertyPerm;
         matches!(self.perm, PropertyPerm::WriteOnly | PropertyPerm::ReadWrite)
     }
 
     /// Serializes the property to XML
     pub fn to_xml(&self) -> Result<String> {
-        let mut writer = quick_xml::Writer::new(Vec::new());
-        let _ = writer.write_event(quick_xml::events::Event::Decl(
-            quick_xml::events::BytesDecl::new("1.0", Some("UTF-8"), None),
-        ));
-
-        let mut root = quick_xml::events::BytesStart::new("property");
-        root.push_attribute(("device", self.device.as_str()));
-        root.push_attribute(("name", self.name.as_str()));
-
-        let _ = writer.write_event(quick_xml::events::Event::Start(root));
-
-        // Add label
-        if let Some(label) = &self.label {
-            let label_element = quick_xml::events::BytesStart::new("label");
-            let _ = writer.write_event(quick_xml::events::Event::Start(label_element));
-            let _ = writer.write_event(quick_xml::events::Event::Text(
-                quick_xml::events::BytesText::new(label),
-            ));
-            let _ = writer.write_event(quick_xml::events::Event::End(
-                quick_xml::events::BytesEnd::new("label"),
-            ));
-        }
-
-        // Add group
-        if let Some(group) = &self.group {
-            let group_element = quick_xml::events::BytesStart::new("group");
-            let _ = writer.write_event(quick_xml::events::Event::Start(group_element));
-            let _ = writer.write_event(quick_xml::events::Event::Text(
-                quick_xml::events::BytesText::new(group),
-            ));
-            let _ = writer.write_event(quick_xml::events::Event::End(
-                quick_xml::events::BytesEnd::new("group"),
-            ));
-        }
-
-        let _ = writer.write_event(quick_xml::events::Event::End(
-            quick_xml::events::BytesEnd::new("property"),
-        ));
-
-        let result = writer.into_inner();
-        String::from_utf8(result).map_err(|e| Error::Xml(e.to_string()))
+        use quick_xml::se;
+        use serde::Serialize;
+        let mut writer = String::new();
+        let ser = se::Serializer::new(&mut writer);
+        self.serialize(ser).map_err(|e| Error::SerializationError(e.to_string()))?;
+        Ok(writer)
     }
 }
 
