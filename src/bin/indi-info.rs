@@ -4,7 +4,6 @@ use indi_rs::client::{Client, ClientConfig};
 use indi_rs::property::{PropertyState, PropertyValue};
 use std::error::Error;
 use tracing::{debug, info, Level};
-use tracing_subscriber;
 
 #[derive(Parser)]
 #[command(author, version, about, long_about = None)]

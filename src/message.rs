@@ -152,20 +152,19 @@ impl Message {
     /// Parse a property value based on the XML content
     fn parse_property_value(xml: &str) -> PropertyValue {
         if xml.contains("<defSwitchVector") || xml.contains("<newSwitchVector") {
-            Self::parse_switch_value(xml).unwrap_or_else(|| PropertyValue::Switch(false))
+            Self::parse_switch_value(xml).unwrap_or(PropertyValue::Switch(false))
         } else if xml.contains("<defNumberVector") || xml.contains("<newNumberVector") {
-            Self::parse_number_value(xml).unwrap_or_else(|| PropertyValue::Number(0.0, None))
+            Self::parse_number_value(xml).unwrap_or(PropertyValue::Number(0.0, None))
         } else if xml.contains("<defLightVector") || xml.contains("<newLightVector") {
-            Self::parse_light_value(xml)
-                .unwrap_or_else(|| PropertyValue::Light(PropertyState::Idle))
+            Self::parse_light_value(xml).unwrap_or(PropertyValue::Light(PropertyState::Idle))
         } else if xml.contains("<defBLOBVector") || xml.contains("<newBLOBVector") {
-            Self::parse_blob_value(xml).unwrap_or_else(|| PropertyValue::Blob {
+            Self::parse_blob_value(xml).unwrap_or(PropertyValue::Blob {
                 format: String::new(),
                 data: Vec::new(),
                 size: 0,
             })
         } else {
-            Self::parse_text_value(xml).unwrap_or_else(|| PropertyValue::Text(String::new()))
+            Self::parse_text_value(xml).unwrap_or(PropertyValue::Text(String::new()))
         }
     }
 }
