@@ -103,7 +103,12 @@ async fn connect_camera(client: &Client, device: &str) -> Result<bool, Box<dyn E
                 if !connected {
                     // Set the CONNECTION property to ON
                     info!("Connecting to {}", device);
-                    client.set_property(device, "CONNECTION", &PropertyValue::Switch(true)).await?;
+                    // For OneOfMany rule, we need to send an array of switches
+                    let switches = vec![
+                        ("CONNECT".to_string(), PropertyValue::Switch(true)),
+                        ("DISCONNECT".to_string(), PropertyValue::Switch(false)),
+                    ];
+                    client.set_property_array(device, "CONNECTION", &switches).await?;
                     
                     // Wait for the connection to be established
                     debug!("Waiting for connection to be established");
