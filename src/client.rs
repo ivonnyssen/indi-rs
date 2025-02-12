@@ -42,9 +42,9 @@ impl ClientState {
 /// INDI client
 #[derive(Debug)]
 pub struct Client {
-    config: ClientConfig,
-    state: Arc<Mutex<ClientState>>,
+    #[allow(dead_code)] // Used indirectly through Arc<Mutex>
     stream: Arc<Mutex<AsyncTcpStream>>,
+    state: Arc<Mutex<ClientState>>,
     sender: mpsc::Sender<Message>,
 }
 
@@ -66,9 +66,8 @@ impl Client {
         });
 
         Ok(Self {
-            config,
-            state,
             stream,
+            state,
             sender,
         })
     }
