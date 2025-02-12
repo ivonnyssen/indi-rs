@@ -12,6 +12,10 @@ INDI is a protocol designed to support control of astronomical instruments in a 
 - Comprehensive error handling
 - Cross-platform compatibility
 
+## Requirements
+
+- Rust 1.80.0 or higher
+
 ## Features
 
 - [ ] INDI Protocol Core Types

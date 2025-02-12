@@ -89,6 +89,84 @@ impl Message {
             Message::Message(msg) => Ok(msg.clone()),
         }
     }
+
+    /// Parse common property attributes from XML
+    fn parse_property_attrs(xml: &str) -> (String, String, PropertyState, PropertyPerm) {
+        let device = parse_attribute(xml, "device")
+            .or_else(|| parse_attribute(xml, "name"))
+            .unwrap_or_default();
+        let name = parse_attribute(xml, "name")
+            .or_else(|| parse_attribute(xml, "device"))
+            .unwrap_or_default();
+        let state = parse_attribute(xml, "state")
+            .map(|s| PropertyState::from_str(&s).unwrap_or(PropertyState::Idle))
+            .unwrap_or(PropertyState::Idle);
+        let perm = parse_attribute(xml, "perm")
+            .map(|s| PropertyPerm::from_str(&s).unwrap_or(PropertyPerm::ReadWrite))
+            .unwrap_or(PropertyPerm::ReadWrite);
+        (device, name, state, perm)
+    }
+
+    /// Parse a text property value
+    fn parse_text_value(xml: &str) -> Option<PropertyValue> {
+        parse_element_content(xml, "oneText")
+            .or_else(|| parse_element_content(xml, "defText"))
+            .map(PropertyValue::Text)
+    }
+
+    /// Parse a number property value
+    fn parse_number_value(xml: &str) -> Option<PropertyValue> {
+        parse_element_content(xml, "oneNumber")
+            .or_else(|| parse_element_content(xml, "defNumber"))
+            .and_then(|s| s.parse().ok())
+            .map(|n| PropertyValue::Number(n, None))
+    }
+
+    /// Parse a switch property value
+    fn parse_switch_value(xml: &str) -> Option<PropertyValue> {
+        parse_element_content(xml, "oneSwitch")
+            .or_else(|| parse_element_content(xml, "defSwitch"))
+            .map(|s| PropertyValue::Switch(s == "On"))
+    }
+
+    /// Parse a light property value
+    fn parse_light_value(xml: &str) -> Option<PropertyValue> {
+        parse_element_content(xml, "oneLight")
+            .or_else(|| parse_element_content(xml, "defLight"))
+            .and_then(|s| PropertyState::from_str(&s).ok())
+            .map(PropertyValue::Light)
+    }
+
+    /// Parse a BLOB property value
+    fn parse_blob_value(xml: &str) -> Option<PropertyValue> {
+        let format = parse_attribute(xml, "format").unwrap_or_default();
+        let size: usize = parse_attribute(xml, "size")
+            .and_then(|s| s.parse().ok())
+            .unwrap_or(0);
+        parse_element_content(xml, "oneBLOB")
+            .or_else(|| parse_element_content(xml, "defBLOB"))
+            .and_then(|data_str| STANDARD.decode(data_str).ok())
+            .map(|data| PropertyValue::Blob { format, data, size })
+    }
+
+    /// Parse a property value based on the XML content
+    fn parse_property_value(xml: &str) -> PropertyValue {
+        if xml.contains("<defSwitchVector") || xml.contains("<newSwitchVector") {
+            Self::parse_switch_value(xml).unwrap_or(PropertyValue::Switch(false))
+        } else if xml.contains("<defNumberVector") || xml.contains("<newNumberVector") {
+            Self::parse_number_value(xml).unwrap_or(PropertyValue::Number(0.0, None))
+        } else if xml.contains("<defLightVector") || xml.contains("<newLightVector") {
+            Self::parse_light_value(xml).unwrap_or(PropertyValue::Light(PropertyState::Idle))
+        } else if xml.contains("<defBLOBVector") || xml.contains("<newBLOBVector") {
+            Self::parse_blob_value(xml).unwrap_or(PropertyValue::Blob {
+                format: String::new(),
+                data: Vec::new(),
+                size: 0,
+            })
+        } else {
+            Self::parse_text_value(xml).unwrap_or(PropertyValue::Text(String::new()))
+        }
+    }
 }
 
 impl FromStr for Message {
@@ -96,108 +174,42 @@ impl FromStr for Message {
 
     fn from_str(s: &str) -> Result<Self> {
         let xml = s.trim();
+
         if xml.starts_with("<getProperties") {
-            Ok(Message::GetProperties(xml.to_string()))
-        } else if xml.starts_with("<defProperty")
+            return Ok(Message::GetProperties(xml.to_string()));
+        }
+
+        if xml.starts_with("<setProperty") {
+            return Ok(Message::SetProperty(xml.to_string()));
+        }
+
+        if xml.starts_with("<message") {
+            return Ok(Message::Message(xml.to_string()));
+        }
+
+        if xml.starts_with("<defProperty")
             || xml.starts_with("<defSwitchVector")
             || xml.starts_with("<defTextVector")
             || xml.starts_with("<defNumberVector")
             || xml.starts_with("<defLightVector")
             || xml.starts_with("<defBLOBVector")
         {
-            let device = parse_attribute(xml, "device")
-                .or_else(|| parse_attribute(xml, "name"))
-                .unwrap_or_default();
-            let name = parse_attribute(xml, "name")
-                .or_else(|| parse_attribute(xml, "device"))
-                .unwrap_or_default();
-            let state = parse_attribute(xml, "state")
-                .map(|s| PropertyState::from_str(&s).unwrap_or(PropertyState::Idle))
-                .unwrap_or(PropertyState::Idle);
-            let perm = parse_attribute(xml, "perm")
-                .map(|s| PropertyPerm::from_str(&s).unwrap_or(PropertyPerm::ReadWrite))
-                .unwrap_or(PropertyPerm::ReadWrite);
-
-            // Parse property value based on type
-            let value = if xml.contains("<oneText") || xml.contains("<defText") {
-                let text = parse_element_content(xml, "oneText")
-                    .or_else(|| parse_element_content(xml, "defText"))
-                    .unwrap_or_default();
-                PropertyValue::Text(text)
-            } else if xml.contains("<oneNumber") || xml.contains("<defNumber") {
-                let num_str = parse_element_content(xml, "oneNumber")
-                    .or_else(|| parse_element_content(xml, "defNumber"))
-                    .unwrap_or_default();
-                let num = num_str.parse().unwrap_or(0.0);
-                PropertyValue::Number(num, None)
-            } else if xml.contains("<oneSwitch") || xml.contains("<defSwitch") {
-                let switch = parse_element_content(xml, "oneSwitch")
-                    .or_else(|| parse_element_content(xml, "defSwitch"))
-                    .unwrap_or_default();
-                PropertyValue::Switch(switch == "On")
-            } else if xml.contains("<oneLight") || xml.contains("<defLight") {
-                let state_str = parse_element_content(xml, "oneLight")
-                    .or_else(|| parse_element_content(xml, "defLight"))
-                    .unwrap_or_default();
-                let state = PropertyState::from_str(&state_str).unwrap_or(PropertyState::Idle);
-                PropertyValue::Light(state)
-            } else if xml.contains("<oneBLOB") || xml.contains("<defBLOB") {
-                let format = parse_attribute(xml, "format").unwrap_or_default();
-                let size_str = parse_attribute(xml, "size").unwrap_or_default();
-                let size: usize = size_str.parse().unwrap_or(0);
-                let data_str = parse_element_content(xml, "oneBLOB")
-                    .or_else(|| parse_element_content(xml, "defBLOB"))
-                    .unwrap_or_default();
-                let data = STANDARD.decode(data_str).unwrap_or_default();
-                PropertyValue::Blob { format, data, size }
-            } else {
-                PropertyValue::Text("".to_string())
-            };
-
-            Ok(Message::DefProperty(Property::new(
+            let (device, name, state, perm) = Message::parse_property_attrs(xml);
+            let value = Message::parse_property_value(xml);
+            return Ok(Message::DefProperty(Property::new(
                 device, name, value, state, perm,
-            )))
-        } else if xml.starts_with("<setProperty") {
-            Ok(Message::SetProperty(xml.to_string()))
-        } else if xml.starts_with("<newProperty") {
-            let device = parse_attribute(xml, "device")
-                .or_else(|| parse_attribute(xml, "name"))
-                .unwrap_or_default();
-            let name = parse_attribute(xml, "name")
-                .or_else(|| parse_attribute(xml, "device"))
-                .unwrap_or_default();
-            let state = parse_attribute(xml, "state")
-                .map(|s| PropertyState::from_str(&s).unwrap_or(PropertyState::Idle))
-                .unwrap_or(PropertyState::Idle);
-            let perm = parse_attribute(xml, "perm")
-                .map(|s| PropertyPerm::from_str(&s).unwrap_or(PropertyPerm::ReadWrite))
-                .unwrap_or(PropertyPerm::ReadWrite);
-            let value = parse_element_content(xml, "oneText")
-                .map(PropertyValue::Text)
-                .or_else(|| {
-                    parse_element_content(xml, "oneNumber")
-                        .and_then(|s| s.parse().ok())
-                        .map(|n| PropertyValue::Number(n, None))
-                })
-                .or_else(|| {
-                    parse_element_content(xml, "oneSwitch")
-                        .map(|s| PropertyValue::Switch(s == "On"))
-                })
-                .or_else(|| {
-                    parse_element_content(xml, "oneLight")
-                        .and_then(|s| PropertyState::from_str(&s).ok())
-                        .map(PropertyValue::Light)
-                })
-                .unwrap_or_default();
-
-            Ok(Message::NewProperty(Property::new(
-                device, name, value, state, perm,
-            )))
-        } else if xml.starts_with("<message") {
-            Ok(Message::Message(xml.to_string()))
-        } else {
-            Err(Error::ParseError("Unknown message type".into()))
+            )));
         }
+
+        if xml.starts_with("<newProperty") {
+            let (device, name, state, perm) = Message::parse_property_attrs(xml);
+            let value = Message::parse_property_value(xml);
+            return Ok(Message::NewProperty(Property::new(
+                device, name, value, state, perm,
+            )));
+        }
+
+        Err(Error::ParseError("Unknown message type".into()))
     }
 }
 
