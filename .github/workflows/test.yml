@@ -72,8 +72,11 @@ jobs:
       - uses: actions/checkout@v4
         with:
           submodules: true
+      # Install stable toolchain with 1.80.0
       - name: Install stable
         uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: 1.80.0
       - name: Install nightly for -Zminimal-versions
         uses: dtolnay/rust-toolchain@nightly
       - name: rustup default stable
