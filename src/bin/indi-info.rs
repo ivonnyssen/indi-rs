@@ -63,10 +63,16 @@ async fn is_camera(client: &Client, device: &str) -> bool {
     if let Some(properties) = client.get_device_properties(device).await {
         // Look for common camera properties
         let is_cam = properties.keys().any(|prop| {
-            prop.contains("CCD_") || prop.contains("CAMERA_") || device.to_lowercase().contains("ccd")
+            prop.contains("CCD_")
+                || prop.contains("CAMERA_")
+                || device.to_lowercase().contains("ccd")
                 || device.to_lowercase().contains("camera")
         });
-        debug!("Device {} {} a camera", device, if is_cam { "is" } else { "is not" });
+        debug!(
+            "Device {} {} a camera",
+            device,
+            if is_cam { "is" } else { "is not" }
+        );
         is_cam
     } else {
         debug!("Could not get properties for device {}", device);
@@ -77,7 +83,7 @@ async fn is_camera(client: &Client, device: &str) -> bool {
 /// Connect to a camera device and wait for it to be ready
 async fn connect_camera(client: &Client, device: &str) -> Result<bool, Box<dyn Error>> {
     info!("Attempting to connect to camera: {}", device);
-    
+
     // Wait for properties to be defined
     debug!("Waiting for properties to be defined for {}", device);
     let mut retries = 0;
@@ -94,7 +100,7 @@ async fn connect_camera(client: &Client, device: &str) -> Result<bool, Box<dyn E
         tokio::time::sleep(Duration::from_millis(500)).await;
         retries += 1;
     };
-    
+
     debug!("Got properties for {}", device);
     if let Some(connection) = properties.get("CONNECTION") {
         debug!("Found CONNECTION property for {}", device);
@@ -108,8 +114,10 @@ async fn connect_camera(client: &Client, device: &str) -> Result<bool, Box<dyn E
                         ("CONNECT".to_string(), PropertyValue::Switch(true)),
                         ("DISCONNECT".to_string(), PropertyValue::Switch(false)),
                     ];
-                    client.set_property_array(device, "CONNECTION", &switches).await?;
-                    
+                    client
+                        .set_property_array(device, "CONNECTION", &switches)
+                        .await?;
+
                     // Wait for the connection to be established
                     debug!("Waiting for connection to be established");
                     retries = 0;
@@ -164,7 +172,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
     let config = ClientConfig {
         server_addr: format!("{}:{}", args.host, args.port),
     };
-    
+
     debug!("Creating new client");
     let client = Client::new(config).await?;
     debug!("Connecting client");
@@ -192,13 +200,13 @@ async fn main() -> Result<(), Box<dyn Error>> {
         if let Some(properties) = client.get_device_properties(&device).await {
             debug!(device = %device, property_count = %properties.len(), "Got device properties");
             println!("\n{}", format!("Device: {}", device).bold());
-            
+
             // Check if this is a camera
             if is_camera(&client, &device).await {
                 info!("Found camera device: {}", device);
                 cameras.push(device.clone());
             }
-            
+
             for (name, prop) in properties {
                 debug!(
                     property = %name,

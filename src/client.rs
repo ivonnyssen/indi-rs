@@ -6,15 +6,15 @@
 use std::collections::HashMap;
 use std::str::FromStr;
 use std::sync::Arc;
-use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader, split};
+use tokio::io::{split, AsyncBufReadExt, AsyncWriteExt, BufReader};
 use tokio::net::TcpStream as AsyncTcpStream;
-use tokio::sync::{Mutex};
 use tokio::sync::mpsc;
+use tokio::sync::Mutex;
 use tracing::{debug, error, info, warn};
 
 use crate::error::{Error, Result};
 use crate::message::Message;
-use crate::property::{Property, PropertyValue, PropertyState, PropertyPerm};
+use crate::property::{Property, PropertyPerm, PropertyState, PropertyValue};
 
 /// Client configuration
 #[derive(Debug, Clone)]
@@ -98,7 +98,7 @@ impl Client {
             PropertyState::Idle,
             PropertyPerm::ReadWrite,
         );
-        
+
         let message = Message::NewProperty(prop);
         self.write_message(&message).await?;
         Ok(())
@@ -125,12 +125,14 @@ impl Client {
                     );
                     props.push(prop);
                 }
-                _ => return Err(Error::Property(
-                    "Only switch properties are supported for array values".to_string()
-                )),
+                _ => {
+                    return Err(Error::Property(
+                        "Only switch properties are supported for array values".to_string(),
+                    ))
+                }
             }
         }
-        
+
         // Create a new property to hold the array
         let array_prop = Property::new(
             device.to_string(),
@@ -139,7 +141,7 @@ impl Client {
             PropertyState::Idle,
             PropertyPerm::ReadWrite,
         );
-        
+
         let message = Message::NewProperty(array_prop);
         self.write_message(&message).await?;
         Ok(())
