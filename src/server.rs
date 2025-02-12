@@ -199,14 +199,30 @@ impl Server {
 
     /// Handle DefProperty message
     async fn handle_def_property(&mut self, property: Property) -> Result<()> {
-        let mut state = self.state.write().await;
-        let device = property.device.clone();
-        let name = property.name.clone();
-        state
-            .properties
-            .entry(device)
-            .or_default()
-            .insert(name, property);
+        let xml = property.to_xml().unwrap();
+        let mut reader = Reader::from_str(&xml);
+        reader.config_mut().trim_text(true);
+
+        let mut buf = Vec::new();
+
+        loop {
+            match reader.read_event_into(&mut buf) {
+                Ok(Event::Start(ref e)) => {
+                    println!("Start: {:?}", e);
+                }
+                Ok(Event::End(ref e)) => {
+                    println!("End: {:?}", e);
+                }
+                Ok(Event::Eof) => break,
+                Err(e) => {
+                    error!("Error at position {}: {:?}", reader.buffer_position(), e);
+                    break;
+                }
+                _ => (),
+            }
+            buf.clear();
+        }
+
         Ok(())
     }
 
@@ -226,7 +242,7 @@ impl Server {
 
 fn parse_attribute(xml: &str, attr: &str) -> Option<String> {
     let mut reader = Reader::from_str(xml);
-    reader.trim_text(true);
+    reader.config_mut().trim_text(true);
 
     let mut buf = Vec::new();
     loop {
@@ -248,31 +264,30 @@ fn parse_attribute(xml: &str, attr: &str) -> Option<String> {
 
 fn parse_element_content(xml: &str, element: &str) -> Option<String> {
     let mut reader = Reader::from_str(xml);
-    reader.trim_text(true);
+    reader.config_mut().trim_text(true);
 
     let mut buf = Vec::new();
-    let mut content = String::new();
-    let mut in_target_element = false;
+    let mut content = None;
 
     loop {
         match reader.read_event_into(&mut buf) {
-            Ok(Event::Start(e)) => {
+            Ok(Event::Start(ref e)) => {
                 if e.name().as_ref() == element.as_bytes() {
-                    in_target_element = true;
-                }
-            }
-            Ok(Event::Text(e)) if in_target_element => {
-                content.push_str(&e.unescape().unwrap());
-            }
-            Ok(Event::End(e)) => {
-                if e.name().as_ref() == element.as_bytes() {
-                    return Some(content);
+                    if let Ok(Event::Text(e)) = reader.read_event_into(&mut buf) {
+                        content = e.unescape().ok().map(|s| s.to_string());
+                        break;
+                    }
                 }
             }
             Ok(Event::Eof) => break,
-            _ => {}
+            Err(e) => {
+                error!("Error at position {}: {:?}", reader.buffer_position(), e);
+                break;
+            }
+            _ => (),
         }
         buf.clear();
     }
-    None
+
+    content
 }

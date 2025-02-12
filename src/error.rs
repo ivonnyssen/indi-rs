@@ -20,6 +20,9 @@ pub enum Error {
     /// Parse error
     #[error("Parse error: {0}")]
     ParseError(String),
+    /// XML error
+    #[error("XML error: {0}")]
+    Xml(String),
 }
 
 /// Result type for INDI operations
