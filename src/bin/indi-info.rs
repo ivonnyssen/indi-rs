@@ -57,7 +57,9 @@ async fn main() -> Result<(), Box<dyn Error>> {
 
     // Initialize tracing with debug if requested
     if args.debug {
-        tracing_subscriber::fmt().with_max_level(Level::DEBUG).init();
+        tracing_subscriber::fmt()
+            .with_max_level(Level::DEBUG)
+            .init();
     } else {
         tracing_subscriber::fmt().with_max_level(Level::INFO).init();
     }
