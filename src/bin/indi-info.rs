@@ -170,6 +170,10 @@ async fn main() -> Result<(), Box<dyn Error>> {
     debug!("Connecting client");
     client.connect().await?;
 
+    // Wait for initial properties
+    debug!("Waiting for initial properties");
+    tokio::time::sleep(Duration::from_secs(1)).await;
+
     debug!("Getting devices");
     let devices = match timeout(Duration::from_secs(5), client.get_devices()).await {
         Ok(result) => result?,
