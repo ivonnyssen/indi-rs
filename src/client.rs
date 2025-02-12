@@ -4,23 +4,15 @@
 //! It handles connecting to INDI servers, sending commands, and receiving responses.
 
 use std::collections::HashMap;
-use std::str::FromStr;
 use std::sync::Arc;
-
-use base64::engine::general_purpose::STANDARD;
-use base64::Engine;
-use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
-use tokio::net::TcpStream;
+use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader, split};
+use tokio::net::TcpStream as AsyncTcpStream;
 use tokio::sync::{mpsc, Mutex};
-
-use tracing::{debug, error, info};
+use tracing::{debug, error, info, warn};
 
 use crate::error::{Error, Result};
 use crate::message::Message;
-use crate::property::{Property, PropertyValue};
-
-use quick_xml::events::{BytesStart, BytesText};
-use quick_xml::Writer;
+use crate::property::{Property, PropertyValue, PropertyState, PropertyPerm};
 
 /// Client configuration
 #[derive(Debug, Clone)]
@@ -53,7 +45,7 @@ pub struct Client {
     /// Message sender
     sender: mpsc::Sender<Message>,
     /// Stream
-    stream: Arc<Mutex<TcpStream>>,
+    stream: Arc<Mutex<AsyncTcpStream>>,
 }
 
 impl Client {
@@ -61,14 +53,13 @@ impl Client {
     pub async fn new(config: ClientConfig) -> Result<Self> {
         let (sender, receiver) = mpsc::channel(32);
         let state = Arc::new(Mutex::new(ClientState::new()));
-        let stream = Arc::new(Mutex::new(TcpStream::connect(&config.server_addr).await?));
+        let stream = Arc::new(Mutex::new(AsyncTcpStream::connect(&config.server_addr).await?));
 
         // Spawn connection handler task
         let state_clone = state.clone();
         let stream_clone = stream.clone();
         tokio::spawn(async move {
-            if let Err(e) = Self::connection_task(receiver, config, state_clone, stream_clone).await
-            {
+            if let Err(e) = Self::connection_task(receiver, stream_clone, state_clone).await {
                 error!("Connection task error: {}", e);
             }
         });
@@ -80,14 +71,10 @@ impl Client {
         })
     }
 
-    /// Connect to an INDI server
+    /// Connect to INDI server
     pub async fn connect(&self) -> Result<()> {
-        // Send initial GetProperties message
+        info!("Sending initial GetProperties message");
         let message = Message::GetProperties("<getProperties version=\"1.7\"/>".to_string());
-        info!(
-            "Sending initial GetProperties message: {}",
-            message.to_xml()?
-        );
         self.write_message(&message).await?;
         Ok(())
     }
@@ -99,98 +86,67 @@ impl Client {
         name: &str,
         value: &PropertyValue,
     ) -> Result<()> {
-        let value_xml = self.format_property_value(value);
-
-        let message = Message::SetProperty(format!(
-            "<setProperty device=\"{}\" name=\"{}\">{}</setProperty>",
-            device, name, value_xml
-        ));
-
+        let prop = Property::new(
+            device.to_string(),
+            name.to_string(),
+            value.clone(),
+            PropertyState::Idle,
+            PropertyPerm::ReadWrite,
+        );
+        
+        let message = Message::NewProperty(prop);
         self.write_message(&message).await?;
         Ok(())
     }
 
-    /// Format property value as XML
-    fn format_property_value(&self, value: &PropertyValue) -> String {
-        let mut writer = Writer::new(Vec::new());
-        let elem_name = match value {
-            PropertyValue::Switch(_) => "oneSwitch",
-            PropertyValue::Text(_) => "oneText",
-            PropertyValue::Number(_, _) => "oneNumber",
-            PropertyValue::Light(_) => "oneLight",
-            PropertyValue::Blob { .. } => "oneBLOB",
-        };
-
-        let mut elem = BytesStart::new(elem_name);
-
-        match value {
-            PropertyValue::Number(_, format) => {
-                elem.push_attribute(("format", format.as_deref().unwrap_or("%f")));
-            }
-            PropertyValue::Blob { format, size, .. } => {
-                elem.push_attribute(("format", format.to_string().as_str()));
-                elem.push_attribute(("size", size.to_string().as_str()));
-            }
-            _ => {}
-        }
-
-        writer
-            .write_event(quick_xml::events::Event::Start(elem.clone()))
-            .unwrap();
-
-        match value {
-            PropertyValue::Switch(value) => {
-                let content = if *value { "On" } else { "Off" };
-                writer
-                    .write_event(quick_xml::events::Event::Text(BytesText::new(content)))
-                    .unwrap();
-            }
-            PropertyValue::Text(value) => {
-                writer
-                    .write_event(quick_xml::events::Event::Text(BytesText::new(value)))
-                    .unwrap();
-            }
-            PropertyValue::Number(value, _) => {
-                writer
-                    .write_event(quick_xml::events::Event::Text(BytesText::new(
-                        &value.to_string(),
-                    )))
-                    .unwrap();
-            }
-            PropertyValue::Light(state) => {
-                writer
-                    .write_event(quick_xml::events::Event::Text(BytesText::new(
-                        state.to_string().as_str(),
-                    )))
-                    .unwrap();
-            }
-            PropertyValue::Blob { data, .. } => {
-                let encoded = STANDARD.encode(data);
-                writer
-                    .write_event(quick_xml::events::Event::Text(BytesText::new(&encoded)))
-                    .unwrap();
+    /// Set a property array value for a device
+    pub async fn set_property_array(
+        &self,
+        device: &str,
+        property: &str,
+        values: &[(String, PropertyValue)],
+    ) -> Result<()> {
+        // Create a vector of properties
+        let mut props = Vec::new();
+        for (name, value) in values {
+            match value {
+                PropertyValue::Switch(_) => {
+                    let prop = Property::new(
+                        device.to_string(),
+                        name.to_string(),
+                        value.clone(),
+                        PropertyState::Idle,
+                        PropertyPerm::ReadWrite,
+                    );
+                    props.push(prop);
+                }
+                _ => return Err(Error::Property(
+                    "Only switch properties are supported for array values".to_string()
+                )),
             }
         }
-
-        writer
-            .write_event(quick_xml::events::Event::End(elem.to_end()))
-            .unwrap();
-        String::from_utf8(writer.into_inner()).unwrap()
+        
+        // Create a new property to hold the array
+        let array_prop = Property::new(
+            device.to_string(),
+            property.to_string(),
+            PropertyValue::Switch(false), // Placeholder value
+            PropertyState::Idle,
+            PropertyPerm::ReadWrite,
+        );
+        
+        let message = Message::NewProperty(array_prop);
+        self.write_message(&message).await?;
+        Ok(())
     }
 
     /// Get all devices
     pub async fn get_devices(&self) -> Result<Vec<String>> {
         // Send getProperties message to get all devices
-        let message = Message::GetProperties("<getProperties version=\"1.7\"/>".to_string());
-        self.sender
-            .send(message)
-            .await
-            .map_err(|_| Error::Message("Failed to send message".to_string()))?;
+        let message = Message::GetProperties(String::new());
+        self.write_message(&message).await?;
 
-        // Wait for response
-        tokio::time::sleep(tokio::time::Duration::from_secs(1)).await;
-
-        // Get devices from state
+        // TODO: Wait for response and parse devices
         let state = self.state.lock().await;
         Ok(state.devices.keys().cloned().collect())
     }
@@ -211,69 +167,98 @@ impl Client {
         Ok(())
     }
 
+    /// Send message to stream
+    async fn send_message(&self, message: &str) -> Result<()> {
+        let mut stream = self.stream.lock().await;
+        stream.write_all(message.as_bytes()).await?;
+        stream.write_all(b"\n").await?;
+        stream.flush().await?;
+        Ok(())
+    }
+
     /// Connection handler task
     async fn connection_task(
         mut receiver: mpsc::Receiver<Message>,
-        _config: ClientConfig,
+        stream: Arc<Mutex<AsyncTcpStream>>,
         state: Arc<Mutex<ClientState>>,
-        stream: Arc<Mutex<TcpStream>>,
     ) -> Result<()> {
         info!("Starting connection task...");
 
-        // Create reader
         let mut stream_guard = stream.lock().await;
-        let (reader, mut writer) = stream_guard.split();
-        // We can't drop stream_guard here as the reader/writer still need it
-
+        let (reader, mut writer) = split(&mut *stream_guard);
         let mut reader = BufReader::new(reader);
-        let mut line = String::new();
-        while let Ok(n) = reader.read_line(&mut line).await {
-            if n == 0 {
-                break;
-            }
-            debug!(message = %line, "Received message");
-            if let Ok(message) = Message::from_str(&line) {
-                let mut state = state.lock().await;
-                match &message {
-                    Message::DefProperty(property) => {
-                        debug!(device = %property.device, "Got DefProperty");
-                        let device = property.device.clone();
-                        let name = property.name.clone();
-                        state
-                            .devices
-                            .entry(device)
-                            .or_default()
-                            .insert(name, property.clone());
-                    }
-                    Message::NewProperty(property) => {
-                        debug!(device = %property.device, "Got NewProperty");
-                        let device = property.device.clone();
-                        let name = property.name.clone();
-                        state
-                            .devices
-                            .entry(device)
-                            .or_default()
-                            .insert(name, property.clone());
-                    }
-                    _ => {
-                        debug!(message_type = ?message, "Got other message type");
-                    }
-                }
-            }
-            line.clear();
-        }
+        let mut buffer = String::new();
 
         loop {
             tokio::select! {
-                // Handle outgoing messages
-                Some(message) = receiver.recv() => {
-                    let xml = message.to_xml()?;
-                    writer.write_all(xml.as_bytes()).await?;
-                    writer.write_all(b"\n").await?;
-                    writer.flush().await?;
+                result = reader.read_line(&mut buffer) => {
+                    match result {
+                        Ok(0) => {
+                            debug!("Connection closed by server");
+                            break;
+                        }
+                        Ok(_) => {
+                            debug!("Received message {}", buffer);
+                            // Parse XML message
+                            if buffer.contains("<defSwitchVector") {
+                                if let Some(device) = Self::extract_attribute(&buffer, "device") {
+                                    if let Some(name) = Self::extract_attribute(&buffer, "name") {
+                                        if let Some(state_str) = Self::extract_attribute(&buffer, "state") {
+                                            debug!("Device {} property {} state {}", device, name, state_str);
+                                            // Update property state
+                                            let mut state = state.lock().await;
+                                            if let Some(device_props) = state.devices.get_mut(&device) {
+                                                if let Some(prop) = device_props.get_mut(&name) {
+                                                    prop.state = match state_str.as_str() {
+                                                        "Idle" => PropertyState::Idle,
+                                                        "Ok" => PropertyState::Ok,
+                                                        "Busy" => PropertyState::Busy,
+                                                        "Alert" => PropertyState::Alert,
+                                                        _ => PropertyState::Idle,
+                                                    };
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                            buffer.clear();
+                        }
+                        Err(e) => {
+                            warn!("Error reading from socket: {}", e);
+                            break;
+                        }
+                    }
+                }
+                msg = receiver.recv() => {
+                    match msg {
+                        Some(message) => {
+                            debug!("Got message: {:?}", message);
+                            let xml = message.to_xml()?;
+                            writer.write_all(xml.as_bytes()).await?;
+                            writer.flush().await?;
+                        }
+                        None => {
+                            debug!("Channel closed");
+                            break;
+                        }
+                    }
                 }
             }
         }
+
+        Ok(())
+    }
+
+    /// Extract attribute value from XML string
+    fn extract_attribute(xml: &str, attr: &str) -> Option<String> {
+        if let Some(start) = xml.find(&format!("{}=\"", attr)) {
+            let start = start + attr.len() + 2;
+            if let Some(end) = xml[start..].find('\"') {
+                return Some(xml[start..start + end].to_string());
+            }
+        }
+        None
     }
 }
 
