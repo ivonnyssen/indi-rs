@@ -75,7 +75,21 @@ impl Client {
     /// Connect to INDI server
     pub async fn connect(&self) -> Result<()> {
         info!("Sending initial GetProperties message");
-        let message = Message::GetProperties("<getProperties version=\"1.7\"/>".to_string());
+        let message = Message::get_properties("1.7", None, None);
+        self.sender
+            .send(message)
+            .await
+            .map_err(|_| Error::Message("Failed to send message".to_string()))?;
+        Ok(())
+    }
+
+    /// Get properties from the INDI server
+    pub async fn get_properties(&mut self, device: Option<&str>, name: Option<&str>) -> Result<()> {
+        let message = Message::get_properties(
+            "1.7",
+            device.map(|s| s.to_string()),
+            name.map(|s| s.to_string()),
+        );
         self.sender
             .send(message)
             .await
@@ -107,19 +121,20 @@ impl Client {
     pub async fn set_property_array(
         &self,
         device: &str,
-        property: &str,
+        name: &str,
         values: &[(String, PropertyValue)],
     ) -> Result<()> {
-        // Create a vector of properties
+        debug!("Setting property array {}@{} to {:?}", device, name, values);
         let mut props = Vec::new();
-        for (name, value) in values {
+        for (element_name, value) in values {
             match value {
-                PropertyValue::Switch(_) => {
-                    let prop = Property::new(
+                PropertyValue::Switch(state) => {
+                    let prop = Property::new_with_value(
                         device.to_string(),
                         name.to_string(),
-                        value.clone(),
-                        PropertyState::Idle,
+                        element_name.to_string(),
+                        PropertyValue::Switch(*state),
+                        PropertyState::Ok,  // Set state to Ok to indicate we're actively changing it
                         PropertyPerm::ReadWrite,
                     );
                     props.push(prop);
@@ -133,11 +148,11 @@ impl Client {
         }
 
         // Create a new property to hold the array
-        let array_prop = Property::new(
+        let array_prop = Property::new_with_elements(
             device.to_string(),
-            property.to_string(),
-            PropertyValue::Switch(false), // Placeholder value
-            PropertyState::Idle,
+            name.to_string(),
+            props,
+            PropertyState::Ok,  // Set state to Ok to indicate we're actively changing it
             PropertyPerm::ReadWrite,
         );
 
@@ -235,7 +250,6 @@ impl Client {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use tokio::io::AsyncWriteExt;
     use tokio::net::TcpListener;
 
     #[tokio::test]
@@ -285,5 +299,52 @@ mod tests {
         } else {
             panic!("No properties found for MockDevice");
         }
+    }
+
+    #[tokio::test]
+    async fn test_get_properties() {
+        // Start test server
+        let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let addr = listener.local_addr().unwrap();
+
+        // Create client
+        let config = ClientConfig {
+            server_addr: addr.to_string(),
+        };
+        let mut client = Client::new(config).await.unwrap();
+
+        // Test get_properties
+        client.get_properties(None, None).await.unwrap();
+        client.get_properties(Some("CCD Simulator"), None).await.unwrap();
+        client.get_properties(Some("CCD Simulator"), Some("CONNECTION")).await.unwrap();
+
+        // Accept connection and verify messages
+        let (mut socket, _) = listener.accept().await.unwrap();
+        let (reader, _writer) = split(&mut socket);
+        let mut reader = BufReader::new(reader);
+        let mut buffer = String::new();
+
+        // Read and verify first message (get all properties)
+        reader.read_line(&mut buffer).await.unwrap();
+        assert!(buffer.contains("getProperties"));
+        assert!(buffer.contains("version=\"1.7\""));
+        assert!(!buffer.contains("device="));
+        assert!(!buffer.contains("name="));
+        buffer.clear();
+
+        // Read and verify second message (get device properties)
+        reader.read_line(&mut buffer).await.unwrap();
+        assert!(buffer.contains("getProperties"));
+        assert!(buffer.contains("version=\"1.7\""));
+        assert!(buffer.contains("device=\"CCD Simulator\""));
+        assert!(!buffer.contains("name="));
+        buffer.clear();
+
+        // Read and verify third message (get specific property)
+        reader.read_line(&mut buffer).await.unwrap();
+        assert!(buffer.contains("getProperties"));
+        assert!(buffer.contains("version=\"1.7\""));
+        assert!(buffer.contains("device=\"CCD Simulator\""));
+        assert!(buffer.contains("name=\"CONNECTION\""));
     }
 }

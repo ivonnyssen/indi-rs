@@ -23,6 +23,9 @@ pub enum Error {
     /// XML error
     #[error("XML error: {0}")]
     Xml(String),
+    /// Serialization error
+    #[error("Serialization error: {0}")]
+    SerializationError(String),
 }
 
 /// Result type for INDI operations

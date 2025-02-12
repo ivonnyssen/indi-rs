@@ -1,93 +1,90 @@
 use base64::engine::general_purpose::STANDARD;
 use base64::Engine;
 use std::str::FromStr;
+use quick_xml::se::Serializer;
+use serde::Serialize;
 
 use crate::error::{Error, Result};
 use crate::property::{Property, PropertyPerm, PropertyState, PropertyValue};
 
+/// GetProperties message attributes
+#[derive(Debug, Clone, Serialize)]
+pub struct GetPropertiesMessage {
+    /// Protocol version
+    #[serde(rename = "@version")]
+    pub version: String,
+    /// Device name (optional)
+    #[serde(rename = "@device", skip_serializing_if = "Option::is_none")]
+    pub device: Option<String>,
+    /// Property name (optional)
+    #[serde(rename = "@name", skip_serializing_if = "Option::is_none")]
+    pub name: Option<String>,
+}
+
+impl GetPropertiesMessage {
+    /// Create a new GetProperties message
+    pub fn new(version: impl Into<String>, device: Option<String>, name: Option<String>) -> Self {
+        Self {
+            version: version.into(),
+            device,
+            name,
+        }
+    }
+
+    /// Convert to XML string
+    pub fn to_xml(&self) -> Result<String> {
+        let mut writer = String::new();
+        let ser = Serializer::new(&mut writer);
+        self.serialize(ser).map_err(|e| Error::SerializationError(e.to_string()))?;
+        Ok(writer)
+    }
+}
+
 /// INDI message
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "lowercase")]
 pub enum Message {
     /// GetProperties message
-    GetProperties(String),
+    #[serde(rename = "getProperties")]
+    GetProperties {
+        #[serde(rename = "$value")]
+        content: String,
+    },
     /// DefProperty message
+    #[serde(rename = "defProperty")]
     DefProperty(Property),
     /// SetProperty message
-    SetProperty(String),
+    #[serde(rename = "setProperty")]
+    SetProperty {
+        #[serde(rename = "$value")]
+        content: String,
+    },
     /// NewProperty message
+    #[serde(rename = "newProperty")]
     NewProperty(Property),
     /// Message message
-    Message(String),
+    #[serde(rename = "message")]
+    Message {
+        #[serde(rename = "$value")]
+        content: String,
+    },
 }
 
 impl Message {
+    /// Create a new GetProperties message
+    pub fn get_properties(version: impl Into<String>, device: Option<String>, name: Option<String>) -> Self {
+        let msg = GetPropertiesMessage::new(version, device, name);
+        Self::GetProperties {
+            content: msg.to_xml().unwrap_or_default(),
+        }
+    }
+
     /// Convert message to XML string
     pub fn to_xml(&self) -> Result<String> {
-        match self {
-            Message::GetProperties(xml) => Ok(xml.clone()),
-            Message::DefProperty(property) => {
-                let value_xml = match &property.value {
-                    PropertyValue::Switch(value) => format!(
-                        "<oneSwitch>{}</oneSwitch>",
-                        if *value { "On" } else { "Off" }
-                    ),
-                    PropertyValue::Text(value) => format!("<oneText>{}</oneText>", value),
-                    PropertyValue::Number(value, format) => format!(
-                        "<oneNumber format=\"{}\">{}</oneNumber>",
-                        format.as_deref().unwrap_or("%f"),
-                        value
-                    ),
-                    PropertyValue::Light(state) => format!("<oneLight>{}</oneLight>", state),
-                    PropertyValue::Blob { format, data, size } => format!(
-                        "<oneBLOB format=\"{}\" size=\"{}\">{}</oneBLOB>",
-                        format,
-                        size,
-                        STANDARD.encode(data)
-                    ),
-                };
-
-                Ok(format!(
-                    "<defProperty device=\"{}\" name=\"{}\" state=\"{}\" perm=\"{}\">{}</defProperty>",
-                    property.device,
-                    property.name,
-                    property.state,
-                    property.perm,
-                    value_xml
-                ))
-            }
-            Message::SetProperty(xml) => Ok(xml.clone()),
-            Message::NewProperty(property) => {
-                let value_xml = match &property.value {
-                    PropertyValue::Switch(value) => format!(
-                        "<oneSwitch>{}</oneSwitch>",
-                        if *value { "On" } else { "Off" }
-                    ),
-                    PropertyValue::Text(value) => format!("<oneText>{}</oneText>", value),
-                    PropertyValue::Number(value, format) => format!(
-                        "<oneNumber format=\"{}\">{}</oneNumber>",
-                        format.as_deref().unwrap_or("%f"),
-                        value
-                    ),
-                    PropertyValue::Light(state) => format!("<oneLight>{}</oneLight>", state),
-                    PropertyValue::Blob { format, data, size } => format!(
-                        "<oneBLOB format=\"{}\" size=\"{}\">{}</oneBLOB>",
-                        format,
-                        size,
-                        STANDARD.encode(data)
-                    ),
-                };
-
-                Ok(format!(
-                    "<newProperty device=\"{}\" name=\"{}\" state=\"{}\" perm=\"{}\">{}</newProperty>",
-                    property.device,
-                    property.name,
-                    property.state,
-                    property.perm,
-                    value_xml
-                ))
-            }
-            Message::Message(msg) => Ok(msg.clone()),
-        }
+        let mut writer = String::new();
+        let ser = Serializer::new(&mut writer);
+        self.serialize(ser).map_err(|e| Error::SerializationError(e.to_string()))?;
+        Ok(writer)
     }
 
     /// Parse common property attributes from XML
@@ -176,15 +173,21 @@ impl FromStr for Message {
         let xml = s.trim();
 
         if xml.starts_with("<getProperties") {
-            return Ok(Message::GetProperties(xml.to_string()));
+            return Ok(Message::GetProperties {
+                content: xml.to_string(),
+            });
         }
 
         if xml.starts_with("<setProperty") {
-            return Ok(Message::SetProperty(xml.to_string()));
+            return Ok(Message::SetProperty {
+                content: xml.to_string(),
+            });
         }
 
         if xml.starts_with("<message") {
-            return Ok(Message::Message(xml.to_string()));
+            return Ok(Message::Message {
+                content: xml.to_string(),
+            });
         }
 
         if xml.starts_with("<defProperty")
@@ -242,8 +245,27 @@ mod tests {
 
     #[test]
     fn test_parse_message() {
-        let xml = "<getProperties version='1.7' />";
+        // Test GetProperties with device and name
+        let msg = Message::get_properties("1.7", Some("CCD Simulator".to_string()), Some("CONNECTION".to_string()));
+        let xml = msg.to_xml().unwrap();
+        assert!(xml.contains("version=\"1.7\""));
+        assert!(xml.contains("device=\"CCD Simulator\""));
+        assert!(xml.contains("name=\"CONNECTION\""));
+
+        // Test GetProperties without device and name
+        let msg = Message::get_properties("1.7", None, None);
+        let xml = msg.to_xml().unwrap();
+        assert!(xml.contains("version=\"1.7\""));
+        assert!(!xml.contains("device="));
+        assert!(!xml.contains("name="));
+
+        // Test parsing existing XML
+        let xml = "<setProperty version=\"1.7\" device=\"CCD Simulator\" name=\"CONNECTION\" />";
         let msg = Message::from_str(xml).unwrap();
-        assert!(matches!(msg, Message::GetProperties(_)));
+        assert!(matches!(msg, Message::SetProperty { content: _ }));
+
+        let xml = "<message>Test message</message>";
+        let msg = Message::from_str(xml).unwrap();
+        assert!(matches!(msg, Message::Message { content: _ }));
     }
 }

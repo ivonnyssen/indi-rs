@@ -8,16 +8,21 @@
 use crate::error::{Error, Result};
 use std::fmt;
 use std::str::FromStr;
+use serde::Serialize;
 
 /// Property permission
-#[derive(Debug, Clone, Copy, PartialEq, Default)]
+#[derive(Debug, Clone, Copy, PartialEq, Default, Serialize)]
+#[serde(rename_all = "lowercase")]
 pub enum PropertyPerm {
     /// Read-only
     #[default]
+    #[serde(rename = "ro")]
     ReadOnly,
     /// Write-only
+    #[serde(rename = "wo")]
     WriteOnly,
     /// Read-write
+    #[serde(rename = "rw")]
     ReadWrite,
 }
 
@@ -48,15 +53,20 @@ impl fmt::Display for PropertyPerm {
 }
 
 /// Property state
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "lowercase")]
 pub enum PropertyState {
-    /// Property is idle
+    /// Idle state
+    #[serde(rename = "Idle")]
     Idle,
-    /// Property is ok
+    /// OK state
+    #[serde(rename = "Ok")]
     Ok,
-    /// Property is busy
+    /// Busy state
+    #[serde(rename = "Busy")]
     Busy,
-    /// Property has an alert
+    /// Alert state
+    #[serde(rename = "Alert")]
     Alert,
 }
 
@@ -86,23 +96,27 @@ impl fmt::Display for PropertyState {
 }
 
 /// Property value types
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize)]
+#[serde(untagged)]
 pub enum PropertyValue {
+    /// Switch value
+    #[serde(rename = "oneSwitch")]
+    Switch(bool),
     /// Text value
+    #[serde(rename = "oneText")]
     Text(String),
     /// Number value with optional format
+    #[serde(rename = "oneNumber")]
     Number(f64, Option<String>),
-    /// Switch value (on/off)
-    Switch(bool),
-    /// Light value (state)
+    /// Light value
+    #[serde(rename = "oneLight")]
     Light(PropertyState),
-    /// Binary large object
+    /// BLOB value
+    #[serde(rename = "oneBLOB")]
     Blob {
-        /// Format of the blob
         format: String,
-        /// Binary data
+        #[serde(serialize_with = "serialize_base64")]
         data: Vec<u8>,
-        /// Size of the data
         size: usize,
     },
 }
@@ -131,28 +145,40 @@ impl fmt::Display for PropertyValue {
 }
 
 /// Property definition
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename = "property")]
 pub struct Property {
     /// Device name
+    #[serde(rename = "@device")]
     pub device: String,
     /// Property name
+    #[serde(rename = "@name")]
     pub name: String,
-    /// Property label
+    /// Property label (optional)
+    #[serde(rename = "@label", skip_serializing_if = "Option::is_none")]
     pub label: Option<String>,
-    /// Property group
+    /// Property group (optional)
+    #[serde(rename = "@group", skip_serializing_if = "Option::is_none")]
     pub group: Option<String>,
     /// Property state
+    #[serde(rename = "@state")]
     pub state: PropertyState,
     /// Property permission
+    #[serde(rename = "@perm")]
     pub perm: PropertyPerm,
-    /// Property timeout
+    /// Property timeout (optional)
+    #[serde(rename = "@timeout", skip_serializing_if = "Option::is_none")]
     pub timeout: Option<u32>,
     /// Property value
+    #[serde(flatten)]
     pub value: PropertyValue,
+    /// Child elements (optional)
+    #[serde(rename = "elements", skip_serializing_if = "Option::is_none")]
+    pub elements: Option<Vec<Property>>,
 }
 
 impl Property {
-    /// Creates a new property
+    /// Create a new property
     pub fn new(
         device: String,
         name: String,
@@ -165,10 +191,54 @@ impl Property {
             name,
             label: None,
             group: None,
+            value,
             state,
             perm,
             timeout: None,
+            elements: None,
+        }
+    }
+
+    /// Create a new property with value
+    pub fn new_with_value(
+        device: String,
+        name: String,
+        element_name: String,
+        value: PropertyValue,
+        state: PropertyState,
+        perm: PropertyPerm,
+    ) -> Self {
+        Self {
+            device,
+            name: element_name,
+            label: None,
+            group: None,
             value,
+            state,
+            perm,
+            timeout: None,
+            elements: None,
+        }
+    }
+
+    /// Create a new property with elements
+    pub fn new_with_elements(
+        device: String,
+        name: String,
+        elements: Vec<Property>,
+        state: PropertyState,
+        perm: PropertyPerm,
+    ) -> Self {
+        Self {
+            device,
+            name,
+            label: None,
+            group: None,
+            value: PropertyValue::Switch(false), // Placeholder value
+            state,
+            perm,
+            timeout: None,
+            elements: Some(elements),
         }
     }
 
@@ -244,6 +314,15 @@ impl Property {
         let result = writer.into_inner();
         String::from_utf8(result).map_err(|e| Error::Xml(e.to_string()))
     }
+}
+
+fn serialize_base64<S>(data: &[u8], serializer: S) -> std::result::Result<S::Ok, S::Error>
+where
+    S: serde::Serializer,
+{
+    use base64::engine::general_purpose::STANDARD;
+    use base64::Engine;
+    serializer.serialize_str(&STANDARD.encode(data))
 }
 
 #[cfg(test)]
