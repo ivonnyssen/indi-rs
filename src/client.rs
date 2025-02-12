@@ -4,10 +4,12 @@
 //! It handles connecting to INDI servers, sending commands, and receiving responses.
 
 use std::collections::HashMap;
+use std::str::FromStr;
 use std::sync::Arc;
 use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader, split};
 use tokio::net::TcpStream as AsyncTcpStream;
-use tokio::sync::{mpsc, Mutex};
+use tokio::sync::{Mutex};
+use tokio::sync::mpsc;
 use tracing::{debug, error, info, warn};
 
 use crate::error::{Error, Result};
@@ -40,20 +42,19 @@ impl ClientState {
 /// INDI client
 #[derive(Debug)]
 pub struct Client {
-    /// Client state
+    config: ClientConfig,
     state: Arc<Mutex<ClientState>>,
-    /// Message sender
-    sender: mpsc::Sender<Message>,
-    /// Stream
     stream: Arc<Mutex<AsyncTcpStream>>,
+    sender: mpsc::Sender<Message>,
 }
 
 impl Client {
     /// Create new client
     pub async fn new(config: ClientConfig) -> Result<Self> {
-        let (sender, receiver) = mpsc::channel(32);
+        let stream = AsyncTcpStream::connect(&config.server_addr).await?;
+        let stream = Arc::new(Mutex::new(stream));
         let state = Arc::new(Mutex::new(ClientState::new()));
-        let stream = Arc::new(Mutex::new(AsyncTcpStream::connect(&config.server_addr).await?));
+        let (sender, receiver) = mpsc::channel(32);
 
         // Spawn connection handler task
         let state_clone = state.clone();
@@ -65,9 +66,10 @@ impl Client {
         });
 
         Ok(Self {
+            config,
             state,
-            sender,
             stream,
+            sender,
         })
     }
 
@@ -75,7 +77,10 @@ impl Client {
     pub async fn connect(&self) -> Result<()> {
         info!("Sending initial GetProperties message");
         let message = Message::GetProperties("<getProperties version=\"1.7\"/>".to_string());
-        self.write_message(&message).await?;
+        self.sender
+            .send(message)
+            .await
+            .map_err(|_| Error::Message("Failed to send message".to_string()))?;
         Ok(())
     }
 
@@ -142,11 +147,6 @@ impl Client {
 
     /// Get all devices
     pub async fn get_devices(&self) -> Result<Vec<String>> {
-        // Send getProperties message to get all devices
-        let message = Message::GetProperties(String::new());
-        self.write_message(&message).await?;
-
-        // TODO: Wait for response and parse devices
         let state = self.state.lock().await;
         Ok(state.devices.keys().cloned().collect())
     }
@@ -159,20 +159,10 @@ impl Client {
 
     /// Write message to stream
     async fn write_message(&self, message: &Message) -> Result<()> {
-        let xml = message.to_xml()?;
-        let mut stream = self.stream.lock().await;
-        stream.write_all(xml.as_bytes()).await?;
-        stream.write_all(b"\n").await?;
-        stream.flush().await?;
-        Ok(())
-    }
-
-    /// Send message to stream
-    async fn send_message(&self, message: &str) -> Result<()> {
-        let mut stream = self.stream.lock().await;
-        stream.write_all(message.as_bytes()).await?;
-        stream.write_all(b"\n").await?;
-        stream.flush().await?;
+        self.sender
+            .send(message.clone())
+            .await
+            .map_err(|_| Error::Message("Failed to send message".to_string()))?;
         Ok(())
     }
 
@@ -200,26 +190,15 @@ impl Client {
                         Ok(_) => {
                             debug!("Received message {}", buffer);
                             // Parse XML message
-                            if buffer.contains("<defSwitchVector") {
-                                if let Some(device) = Self::extract_attribute(&buffer, "device") {
-                                    if let Some(name) = Self::extract_attribute(&buffer, "name") {
-                                        if let Some(state_str) = Self::extract_attribute(&buffer, "state") {
-                                            debug!("Device {} property {} state {}", device, name, state_str);
-                                            // Update property state
-                                            let mut state = state.lock().await;
-                                            if let Some(device_props) = state.devices.get_mut(&device) {
-                                                if let Some(prop) = device_props.get_mut(&name) {
-                                                    prop.state = match state_str.as_str() {
-                                                        "Idle" => PropertyState::Idle,
-                                                        "Ok" => PropertyState::Ok,
-                                                        "Busy" => PropertyState::Busy,
-                                                        "Alert" => PropertyState::Alert,
-                                                        _ => PropertyState::Idle,
-                                                    };
-                                                }
-                                            }
-                                        }
+                            if let Ok(message) = Message::from_str(&buffer) {
+                                match message {
+                                    Message::DefProperty(prop) => {
+                                        debug!("Got property definition: {:?}", prop);
+                                        let mut state = state.lock().await;
+                                        let device_props = state.devices.entry(prop.device.clone()).or_insert_with(HashMap::new);
+                                        device_props.insert(prop.name.clone(), prop);
                                     }
+                                    _ => debug!("Ignoring message: {:?}", message),
                                 }
                             }
                             buffer.clear();
@@ -236,6 +215,7 @@ impl Client {
                             debug!("Got message: {:?}", message);
                             let xml = message.to_xml()?;
                             writer.write_all(xml.as_bytes()).await?;
+                            writer.write_all(b"\n").await?;
                             writer.flush().await?;
                         }
                         None => {
@@ -248,17 +228,6 @@ impl Client {
         }
 
         Ok(())
-    }
-
-    /// Extract attribute value from XML string
-    fn extract_attribute(xml: &str, attr: &str) -> Option<String> {
-        if let Some(start) = xml.find(&format!("{}=\"", attr)) {
-            let start = start + attr.len() + 2;
-            if let Some(end) = xml[start..].find('\"') {
-                return Some(xml[start..start + end].to_string());
-            }
-        }
-        None
     }
 }
 
