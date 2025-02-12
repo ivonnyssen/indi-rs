@@ -78,10 +78,6 @@ async fn is_camera(client: &Client, device: &str) -> bool {
 async fn connect_camera(client: &Client, device: &str) -> Result<bool, Box<dyn Error>> {
     info!("Attempting to connect to camera: {}", device);
     
-    // First, watch this specific device
-    debug!("Watching device {}", device);
-    client.watch_device(device).await?;
-    
     // Wait for properties to be defined
     debug!("Waiting for properties to be defined for {}", device);
     let mut retries = 0;
