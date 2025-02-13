@@ -5,14 +5,13 @@
 //! types (Number, Text, Switch, etc.), states (Idle, OK, Busy, Alert),
 //! and permissions (RO, WO, RW).
 
-use serde::Serialize;
 use std::fmt;
 use std::str::FromStr;
-
 use crate::error::{Error, Result};
+use serde::{Serialize, Deserialize};
 
 /// Property permission
-#[derive(Debug, Clone, Copy, PartialEq, Default, Serialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
 pub enum PropertyPerm {
     /// Read-only permission
@@ -54,20 +53,17 @@ impl fmt::Display for PropertyPerm {
 }
 
 /// Property state
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
 pub enum PropertyState {
-    /// Device/property is idle
-    #[serde(rename = "Idle")]
+    /// Property is idle
+    #[default]
     Idle,
-    /// Device/property is operating correctly
-    #[serde(rename = "Ok")]
+    /// Property is ok
     Ok,
-    /// Device/property is busy
-    #[serde(rename = "Busy")]
+    /// Property is busy
     Busy,
-    /// Device/property has an error condition
-    #[serde(rename = "Alert")]
+    /// Property is in alert state
     Alert,
 }
 
@@ -75,11 +71,17 @@ impl FromStr for PropertyState {
     type Err = Error;
 
     fn from_str(s: &str) -> Result<Self> {
-        match s {
-            "Idle" => Ok(PropertyState::Idle),
-            "Ok" => Ok(PropertyState::Ok),
-            "Busy" => Ok(PropertyState::Busy),
-            "Alert" => Ok(PropertyState::Alert),
+        // First try to parse as a direct string value
+        match s.trim().to_lowercase().as_str() {
+            "idle" => Ok(PropertyState::Idle),
+            "ok" => Ok(PropertyState::Ok),
+            "busy" => Ok(PropertyState::Busy),
+            "alert" => Ok(PropertyState::Alert),
+            // Try to parse XML attribute format (e.g. state="idle")
+            s if s.starts_with("state=") => {
+                let value = s.trim_start_matches("state=").trim_matches('"');
+                PropertyState::from_str(value)
+            }
             _ => Err(Error::Property(format!("Invalid property state: {}", s))),
         }
     }
@@ -88,68 +90,62 @@ impl FromStr for PropertyState {
 impl fmt::Display for PropertyState {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            PropertyState::Idle => write!(f, "Idle"),
-            PropertyState::Ok => write!(f, "Ok"),
-            PropertyState::Busy => write!(f, "Busy"),
-            PropertyState::Alert => write!(f, "Alert"),
+            PropertyState::Idle => write!(f, "idle"),
+            PropertyState::Ok => write!(f, "ok"),
+            PropertyState::Busy => write!(f, "busy"),
+            PropertyState::Alert => write!(f, "alert"),
         }
     }
 }
 
-/// Property value types
-#[derive(Debug, Clone, PartialEq, Serialize)]
+/// Property value types supported by INDI
+#[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(untagged)]
 pub enum PropertyValue {
-    /// Switch value
-    #[serde(rename = "oneSwitch")]
-    Switch(bool),
     /// Text value
-    #[serde(rename = "oneText")]
     Text(String),
-    /// Number value with optional format
-    #[serde(rename = "oneNumber")]
+    /// Number value with optional format string
     Number(f64, Option<String>),
-    /// Light value
-    #[serde(rename = "oneLight")]
+    /// Switch value (On/Off)
+    Switch(bool),
+    /// Light value representing a state
     Light(PropertyState),
-    /// BLOB value
-    #[serde(rename = "oneBLOB")]
+    /// Binary large object (BLOB)
     Blob {
-        /// Format of the BLOB data (e.g., ".fits", ".raw", etc.)
-        format: String,
-        /// Binary data of the BLOB
-        #[serde(serialize_with = "serialize_base64")]
-        data: Vec<u8>,
-        /// Size of the binary data in bytes
+        /// Size of the BLOB in bytes
         size: usize,
+        /// Format of the BLOB (e.g., "fits", "raw", etc.)
+        format: String,
+        /// Binary data
+        data: Vec<u8>,
     },
 }
 
 impl Default for PropertyValue {
     fn default() -> Self {
-        Self::Text(String::default())
+        PropertyValue::Text(String::new())
     }
 }
 
 impl fmt::Display for PropertyValue {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            PropertyValue::Text(s) => write!(f, "{}", s),
-            PropertyValue::Number(n, Some(_fmt_str)) => write!(f, "{n}"),
-            PropertyValue::Number(n, None) => write!(f, "{}", n),
-            PropertyValue::Switch(b) => write!(f, "{}", if *b { "On" } else { "Off" }),
-            PropertyValue::Light(s) => write!(f, "{}", s),
-            PropertyValue::Blob {
-                data: _,
-                format,
-                size,
-            } => write!(f, "{} bytes ({})", size, format),
+            PropertyValue::Text(text) => write!(f, "{}", text),
+            PropertyValue::Number(num, format) => match format {
+                Some(fmt) => write!(f, "{} {}", num, fmt),
+                None => write!(f, "{}", num),
+            },
+            PropertyValue::Switch(state) => write!(f, "{}", if *state { "On" } else { "Off" }),
+            PropertyValue::Light(state) => write!(f, "{}", state),
+            PropertyValue::Blob { format, size, .. } => {
+                write!(f, "[BLOB format={} size={}]", format, size)
+            }
         }
     }
 }
 
-/// Property definition
-#[derive(Debug, Clone, Serialize)]
+/// INDI property
+#[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename = "property")]
 pub struct Property {
     /// Device name
@@ -158,12 +154,6 @@ pub struct Property {
     /// Property name
     #[serde(rename = "@name")]
     pub name: String,
-    /// Property label (optional)
-    #[serde(rename = "label", skip_serializing_if = "Option::is_none")]
-    pub label: Option<String>,
-    /// Property group (optional)
-    #[serde(rename = "group", skip_serializing_if = "Option::is_none")]
-    pub group: Option<String>,
     /// Property value
     #[serde(flatten)]
     pub value: PropertyValue,
@@ -173,6 +163,12 @@ pub struct Property {
     /// Property permissions
     #[serde(rename = "@perm")]
     pub perm: PropertyPerm,
+    /// Property label (optional)
+    #[serde(rename = "label", skip_serializing_if = "Option::is_none")]
+    pub label: Option<String>,
+    /// Property group (optional)
+    #[serde(rename = "group", skip_serializing_if = "Option::is_none")]
+    pub group: Option<String>,
     /// Property timeout (optional)
     #[serde(rename = "@timeout", skip_serializing_if = "Option::is_none")]
     pub timeout: Option<u32>,
@@ -193,11 +189,11 @@ impl Property {
         Self {
             device,
             name,
-            label: None,
-            group: None,
             value,
             state,
             perm,
+            label: None,
+            group: None,
             timeout: None,
             elements: None,
         }
@@ -215,11 +211,11 @@ impl Property {
         Self {
             device,
             name: element_name,
-            label: None,
-            group: None,
             value,
             state,
             perm,
+            label: None,
+            group: None,
             timeout: None,
             elements: None,
         }
@@ -236,11 +232,11 @@ impl Property {
         Self {
             device,
             name: String::default(),
-            label: None,
-            group: None,
             value: PropertyValue::default(),
             state,
             perm,
+            label: None,
+            group: None,
             timeout: None,
             elements: Some(elements),
         }
@@ -278,23 +274,13 @@ impl Property {
 
     /// Serializes the property to XML
     pub fn to_xml(&self) -> Result<String> {
-        use quick_xml::se;
-        use serde::Serialize;
+        use quick_xml::se::Serializer;
         let mut writer = String::new();
-        let ser = se::Serializer::new(&mut writer);
+        let ser = Serializer::new(&mut writer);
         self.serialize(ser)
             .map_err(|e| Error::SerializationError(e.to_string()))?;
         Ok(writer)
     }
-}
-
-fn serialize_base64<S>(data: &[u8], serializer: S) -> std::result::Result<S::Ok, S::Error>
-where
-    S: serde::Serializer,
-{
-    use base64::engine::general_purpose::STANDARD;
-    use base64::Engine;
-    serializer.serialize_str(&STANDARD.encode(data))
 }
 
 #[cfg(test)]
@@ -360,16 +346,16 @@ mod tests {
     #[test]
     fn test_property_states() {
         assert_eq!(
-            "Idle".parse::<PropertyState>().unwrap(),
+            "idle".parse::<PropertyState>().unwrap(),
             PropertyState::Idle
         );
-        assert_eq!("Ok".parse::<PropertyState>().unwrap(), PropertyState::Ok);
+        assert_eq!("ok".parse::<PropertyState>().unwrap(), PropertyState::Ok);
         assert_eq!(
-            "Busy".parse::<PropertyState>().unwrap(),
+            "busy".parse::<PropertyState>().unwrap(),
             PropertyState::Busy
         );
         assert_eq!(
-            "Alert".parse::<PropertyState>().unwrap(),
+            "alert".parse::<PropertyState>().unwrap(),
             PropertyState::Alert
         );
         assert!("Invalid".parse::<PropertyState>().is_err());
@@ -377,18 +363,24 @@ mod tests {
 
     #[test]
     fn test_property_value_display() {
-        assert_eq!(PropertyValue::Text("test".to_string()).to_string(), "test");
-        assert_eq!(PropertyValue::Number(42.0, None).to_string(), "42");
-        assert_eq!(PropertyValue::Switch(true).to_string(), "On");
-        assert_eq!(PropertyValue::Light(PropertyState::Ok).to_string(), "Ok");
-        assert_eq!(
-            PropertyValue::Blob {
-                data: vec![1, 2, 3],
-                format: ".fits".to_string(),
-                size: 3
-            }
-            .to_string(),
-            "3 bytes (.fits)"
-        );
+        let text = PropertyValue::Text("test".to_string());
+        let num = PropertyValue::Number(42.0, None);
+        let num_fmt = PropertyValue::Number(42.0, Some("m/s".to_string()));
+        let switch_on = PropertyValue::Switch(true);
+        let switch_off = PropertyValue::Switch(false);
+        let light = PropertyValue::Light(PropertyState::Ok);
+        let blob = PropertyValue::Blob {
+            size: 100,
+            format: "fits".to_string(),
+            data: vec![0; 100],
+        };
+
+        assert_eq!(text.to_string(), "test");
+        assert_eq!(num.to_string(), "42");
+        assert_eq!(num_fmt.to_string(), "42 m/s");
+        assert_eq!(switch_on.to_string(), "On");
+        assert_eq!(switch_off.to_string(), "Off");
+        assert_eq!(light.to_string(), "ok");
+        assert_eq!(blob.to_string(), "[BLOB format=fits size=100]");
     }
 }
