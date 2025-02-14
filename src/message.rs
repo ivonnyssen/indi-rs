@@ -59,10 +59,10 @@ pub enum Message {
         #[serde(rename = "@name")]
         name: String,
         /// Property label
-        #[serde(rename = "@label")]
+        #[serde(rename = "@label", default)]
         label: String,
         /// Property group
-        #[serde(rename = "@group")]
+        #[serde(rename = "@group", default)]
         group: String,
         /// Property state
         #[serde(rename = "@state")]
@@ -74,14 +74,14 @@ pub enum Message {
         #[serde(rename = "@rule")]
         rule: String,
         /// Property timeout
-        #[serde(rename = "@timeout")]
+        #[serde(rename = "@timeout", default)]
         timeout: i32,
         /// Property timestamp
-        #[serde(rename = "@timestamp")]
+        #[serde(rename = "@timestamp", default)]
         timestamp: String,
         /// Switch elements
-        #[serde(rename = "defSwitch")]
-        switches: Vec<DefSwitch>,
+        #[serde(rename = "oneSwitch")]
+        switches: Vec<OneSwitch>,
     },
     /// Define text vector
     #[serde(rename = "defTextVector")]
@@ -145,6 +145,22 @@ pub enum Message {
         #[serde(rename = "defNumber")]
         numbers: Vec<DefNumber>,
     },
+    /// New switch vector message
+    #[serde(rename = "newSwitchVector")]
+    NewSwitchVector {
+        /// Device name
+        #[serde(rename = "@device")]
+        device: String,
+        /// Property name
+        #[serde(rename = "@name")]
+        name: String,
+        /// Property state
+        #[serde(rename = "@state")]
+        state: PropertyState,
+        /// Switch elements
+        #[serde(rename = "oneSwitch")]
+        switches: Vec<OneSwitch>,
+    },
 }
 
 /// Switch element in a switch vector
@@ -156,6 +172,17 @@ pub struct DefSwitch {
     /// Switch label
     #[serde(rename = "@label")]
     pub label: String,
+    /// Switch value
+    #[serde(rename = "$value")]
+    pub value: String,
+}
+
+/// Switch element in a new switch vector
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct OneSwitch {
+    /// Switch name
+    #[serde(rename = "@name")]
+    pub name: String,
     /// Switch value
     #[serde(rename = "$value")]
     pub value: String,
@@ -203,7 +230,11 @@ pub struct DefNumber {
 
 impl Message {
     /// Create a new GetProperties message
-    pub fn get_properties(version: impl Into<String>, device: Option<String>, name: Option<String>) -> Self {
+    pub fn get_properties(
+        version: impl Into<String>,
+        device: Option<String>,
+        name: Option<String>,
+    ) -> Self {
         Self::GetProperties {
             version: version.into(),
             device,
@@ -216,7 +247,8 @@ impl Message {
         let mut writer = String::new();
         let mut ser = Serializer::new(&mut writer);
         ser.indent(' ', 4);
-        self.serialize(ser).map_err(|e| Error::SerializationError(e.to_string()))?;
+        self.serialize(ser)
+            .map_err(|e| Error::SerializationError(e.to_string()))?;
         Ok(writer)
     }
 }
@@ -228,7 +260,9 @@ impl FromStr for Message {
         // Create a cursor over the string data
         let cursor = std::io::Cursor::new(s);
         let reader = std::io::BufReader::new(cursor);
-        quick_xml::de::from_reader(reader).map_err(|e| Error::SerializationError(e.to_string()))
+        let mut deserializer = quick_xml::de::Deserializer::from_reader(reader);
+        serde_path_to_error::deserialize(&mut deserializer)
+            .map_err(|e| Error::SerializationError(e.to_string()))
     }
 }
 
@@ -252,7 +286,11 @@ mod tests {
         // Test parsing the XML back
         let parsed = Message::from_str(&xml).unwrap();
         match parsed {
-            Message::GetProperties { version, device, name } => {
+            Message::GetProperties {
+                version,
+                device,
+                name,
+            } => {
                 assert_eq!(version, "1.7");
                 assert_eq!(device.unwrap(), "CCD Simulator");
                 assert_eq!(name.unwrap(), "CONNECTION");
@@ -264,16 +302,21 @@ mod tests {
     #[test]
     fn test_parse_def_switch_vector() {
         let xml = r#"<defSwitchVector device="Telescope Simulator" name="CONNECTION" label="Connection" group="Main Control" state="Idle" perm="rw" rule="OneOfMany" timeout="60" timestamp="2025-02-14T00:42:55">
- <defSwitch name="CONNECT" label="Connect">
+ <oneSwitch name="CONNECT" label="Connect">
 Off
- </defSwitch>
- <defSwitch name="DISCONNECT" label="Disconnect">
+ </oneSwitch>
+ <oneSwitch name="DISCONNECT" label="Disconnect">
 On
- </defSwitch>
+ </oneSwitch>
 </defSwitchVector>"#;
         let parsed = Message::from_str(xml).unwrap();
         match parsed {
-            Message::DefSwitchVector { device, name, switches, .. } => {
+            Message::DefSwitchVector {
+                device,
+                name,
+                switches,
+                ..
+            } => {
                 assert_eq!(device, "Telescope Simulator");
                 assert_eq!(name, "CONNECTION");
                 assert_eq!(switches.len(), 2);

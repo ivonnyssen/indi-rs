@@ -26,6 +26,9 @@ pub enum Error {
     /// Serialization error
     #[error("Serialization error: {0}")]
     SerializationError(String),
+    /// Not connected to server
+    #[error("Not connected to server")]
+    NotConnected,
 }
 
 /// Result type for INDI operations

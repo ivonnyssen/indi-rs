@@ -85,6 +85,20 @@ async fn disable_simulation(client: &mut Client, device: &str) -> Result<bool> {
     Ok(true)
 }
 
+/// Enable simulation mode for a device
+#[allow(dead_code)]
+async fn enable_simulation(client: &mut Client, device: &str) -> Result<()> {
+    info!("Enabling simulation mode for: {}", device);
+
+    // Set SIMULATION to On
+    let switches = vec![("ENABLE".to_string(), SwitchState::On)];
+    client
+        .set_switch_vector(device, "SIMULATION", &switches)
+        .await?;
+
+    Ok(())
+}
+
 /// Connect to a camera device
 async fn connect_camera(client: &mut Client, device: &str) -> Result<bool> {
     info!("Attempting to connect to camera: {}", device);
