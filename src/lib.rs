@@ -39,6 +39,6 @@ mod tests {
 
     #[test]
     fn test_protocol_version() {
-        assert!(!PROTOCOL_VERSION.is_empty());
+        assert_eq!(PROTOCOL_VERSION, "1.7");
     }
 }

@@ -194,6 +194,7 @@ impl Client {
         let (reader, mut writer) = split(&mut *stream_guard);
         let mut reader = BufReader::new(reader);
         let mut buffer = String::new();
+        let mut xml_buffer = String::new();
 
         loop {
             tokio::select! {
@@ -203,21 +204,62 @@ impl Client {
                             debug!("Connection closed by server");
                             break;
                         }
-                        Ok(_) => {
-                            debug!("Received message {}", buffer);
-                            // Parse XML message
-                            if let Ok(message) = Message::from_str(&buffer) {
-                                match message {
-                                    Message::DefProperty(prop) => {
-                                        debug!("Got property definition: {:?}", prop);
-                                        let mut state = state.lock().await;
-                                        let device_props = state.devices.entry(prop.device.clone()).or_insert_with(HashMap::new);
-                                        device_props.insert(prop.name.clone(), prop);
+                        Ok(n) => {
+                            debug!("Received {} bytes: {}", n, buffer);
+                            xml_buffer.push_str(&buffer);
+                            buffer.clear(); // Clear the line buffer for next read
+
+                            // Try to parse complete XML messages
+                            if xml_buffer.contains("/>") || xml_buffer.contains("</") {
+                                debug!("Attempting to parse XML: {}", xml_buffer);
+                                match Message::from_str(&xml_buffer) {
+                                    Ok(message) => {
+                                        debug!("Parsed message: {:?}", message);
+                                        match message {
+                                            Message::DefProperty(prop) => {
+                                                debug!("Got property definition for device '{}', property '{}'", prop.device, prop.name);
+                                                let mut state = state.lock().await;
+                                                let device_props = state.devices.entry(prop.device.clone()).or_insert_with(HashMap::new);
+                                                device_props.insert(prop.name.clone(), prop);
+                                                debug!("Updated state after DefProperty: {:?}", *state);
+                                            }
+                                            Message::DefSwitchVector { device, name, state: prop_state, perm, switches, .. } => {
+                                                debug!("Got switch vector for device '{}', property '{}'", device, name);
+                                                debug!("Switches: {:?}", switches);
+                                                let mut state = state.lock().await;
+                                                let device_props = state.devices.entry(device.clone()).or_insert_with(HashMap::new);
+                                                
+                                                // Create parent property with switches
+                                                let prop = Property::new_with_value(
+                                                    device.clone(),
+                                                    name.clone(),
+                                                    name.clone(), // Use the property name as the element name
+                                                    PropertyValue::SwitchVector(switches.iter().map(|s| (s.name.clone(), s.value.trim() == "On")).collect()),
+                                                    prop_state,
+                                                    PropertyPerm::from_str(&perm).unwrap_or(PropertyPerm::ReadWrite),
+                                                );
+                                                device_props.insert(name.clone(), prop);
+                                                debug!("Updated state after DefSwitchVector: {:?}", *state);
+                                            }
+                                            Message::DelProperty { device } => {
+                                                debug!("Got delete property for device '{}'", device);
+                                                let mut state = state.lock().await;
+                                                state.devices.remove(&device);
+                                                debug!("Updated state after DelProperty: {:?}", *state);
+                                            }
+                                            _ => {
+                                                debug!("Ignoring message: {:?}", message);
+                                            }
+                                        }
+                                        xml_buffer.clear(); // Clear the XML buffer after successful parse
                                     }
-                                    _ => debug!("Ignoring message: {:?}", message),
+                                    Err(e) => {
+                                        debug!("Failed to parse XML: {}", e);
+                                        debug!("XML buffer contents: {}", xml_buffer);
+                                        // Don't clear buffer on error, might be incomplete message
+                                    }
                                 }
                             }
-                            buffer.clear();
                         }
                         Err(e) => {
                             warn!("Error reading from socket: {}", e);
@@ -228,11 +270,13 @@ impl Client {
                 msg = receiver.recv() => {
                     match msg {
                         Some(message) => {
-                            debug!("Got message: {:?}", message);
+                            debug!("Sending message: {:?}", message);
                             let xml = message.to_xml()?;
+                            debug!("Sending XML: {}", xml);
                             writer.write_all(xml.as_bytes()).await?;
                             writer.write_all(b"\n").await?;
                             writer.flush().await?;
+                            debug!("Message sent");
                         }
                         None => {
                             debug!("Channel closed");
@@ -242,7 +286,6 @@ impl Client {
                 }
             }
         }
-
         Ok(())
     }
 }
@@ -266,15 +309,25 @@ mod tests {
 
             // Read client message
             buf_reader.read_line(&mut line).await.unwrap();
+            debug!("Server received: {}", line);
             assert!(line.contains("getProperties"));
 
-            // Send mock response
-            let response = "<defTextVector device=\"MockDevice\" name=\"MockProp\" state=\"Ok\" perm=\"ro\"><defText>test</defText></defTextVector>\n";
-            buf_reader
-                .into_inner()
-                .write_all(response.as_bytes())
-                .await
-                .unwrap();
+            // Send mock response with real INDI server response
+            let response = r#"<defSwitchVector device="Telescope Simulator" name="CONNECTION" label="Connection" group="Main Control" state="Idle" perm="rw" rule="OneOfMany" timeout="60" timestamp="2025-02-14T00:42:55">
+    <defSwitch name="CONNECT" label="Connect">
+Off
+    </defSwitch>
+    <defSwitch name="DISCONNECT" label="Disconnect">
+On
+    </defSwitch>
+</defSwitchVector>
+"#;
+            debug!("Server sending: {}", response);
+            let mut writer = buf_reader.into_inner();
+            writer.write_all(response.as_bytes()).await.unwrap();
+            writer.write_all(b"\n").await.unwrap();
+            writer.flush().await.unwrap();
+            debug!("Server sent response");
         });
 
         // Create client with mock server address
@@ -285,19 +338,26 @@ mod tests {
         let client = Client::new(config).await.expect("Failed to create client");
         client.connect().await.expect("Failed to connect");
 
-        // Wait a bit for the server to process
-        tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
+        // Wait a bit for the message to be processed
+        tokio::time::sleep(tokio::time::Duration::from_millis(500)).await;
 
-        // Check if we got the mock device
+        // Get devices and check
         let devices = client.get_devices().await.expect("Failed to get devices");
-        assert_eq!(devices.len(), 1);
-        assert_eq!(devices[0], "MockDevice");
+        debug!("Found devices: {:?}", devices);
+        assert_eq!(devices.len(), 1, "Expected 1 device, found {}", devices.len());
+        assert_eq!(devices[0], "Telescope Simulator", "Expected Telescope Simulator, found {}", devices[0]);
 
-        if let Some(props) = client.get_device_properties("MockDevice").await {
-            assert_eq!(props.len(), 1);
-            assert!(props.contains_key("MockProp"));
+        // Get properties and check
+        let state = client.state.lock().await;
+        debug!("Client state: {:?}", *state);
+        drop(state);
+
+        if let Some(props) = client.get_device_properties("Telescope Simulator").await {
+            debug!("Found properties for Telescope Simulator: {:?}", props);
+            assert_eq!(props.len(), 1, "Expected 1 property, found {}", props.len());
+            assert!(props.contains_key("CONNECTION"), "Expected CONNECTION property");
         } else {
-            panic!("No properties found for MockDevice");
+            panic!("No properties found for Telescope Simulator");
         }
     }
 

@@ -5,6 +5,7 @@
 //! types (Number, Text, Switch, etc.), states (Idle, OK, Busy, Alert),
 //! and permissions (RO, WO, RW).
 
+use std::collections::HashMap;
 use std::fmt;
 use std::str::FromStr;
 use crate::error::{Error, Result};
@@ -54,7 +55,7 @@ impl fmt::Display for PropertyPerm {
 
 /// Property state
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
-#[serde(rename_all = "lowercase")]
+#[serde(rename_all = "PascalCase")]
 pub enum PropertyState {
     /// Property is idle
     #[default]
@@ -71,17 +72,11 @@ impl FromStr for PropertyState {
     type Err = Error;
 
     fn from_str(s: &str) -> Result<Self> {
-        // First try to parse as a direct string value
-        match s.trim().to_lowercase().as_str() {
-            "idle" => Ok(PropertyState::Idle),
-            "ok" => Ok(PropertyState::Ok),
-            "busy" => Ok(PropertyState::Busy),
-            "alert" => Ok(PropertyState::Alert),
-            // Try to parse XML attribute format (e.g. state="idle")
-            s if s.starts_with("state=") => {
-                let value = s.trim_start_matches("state=").trim_matches('"');
-                PropertyState::from_str(value)
-            }
+        match s.trim() {
+            "Idle" => Ok(PropertyState::Idle),
+            "Ok" => Ok(PropertyState::Ok),
+            "Busy" => Ok(PropertyState::Busy),
+            "Alert" => Ok(PropertyState::Alert),
             _ => Err(Error::Property(format!("Invalid property state: {}", s))),
         }
     }
@@ -90,10 +85,10 @@ impl FromStr for PropertyState {
 impl fmt::Display for PropertyState {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            PropertyState::Idle => write!(f, "idle"),
-            PropertyState::Ok => write!(f, "ok"),
-            PropertyState::Busy => write!(f, "busy"),
-            PropertyState::Alert => write!(f, "alert"),
+            PropertyState::Idle => write!(f, "Idle"),
+            PropertyState::Ok => write!(f, "Ok"),
+            PropertyState::Busy => write!(f, "Busy"),
+            PropertyState::Alert => write!(f, "Alert"),
         }
     }
 }
@@ -119,6 +114,8 @@ pub enum PropertyValue {
         /// Binary data
         data: Vec<u8>,
     },
+    /// Switch vector value
+    SwitchVector(HashMap<String, bool>),
 }
 
 impl Default for PropertyValue {
@@ -131,14 +128,24 @@ impl fmt::Display for PropertyValue {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             PropertyValue::Text(text) => write!(f, "{}", text),
-            PropertyValue::Number(num, format) => match format {
-                Some(fmt) => write!(f, "{} {}", num, fmt),
-                None => write!(f, "{}", num),
-            },
+            PropertyValue::Number(num, None) => write!(f, "{}", num),
+            PropertyValue::Number(num, Some(fmt_str)) => write!(f, "{} {}", num, fmt_str),
             PropertyValue::Switch(state) => write!(f, "{}", if *state { "On" } else { "Off" }),
             PropertyValue::Light(state) => write!(f, "{}", state),
             PropertyValue::Blob { format, size, .. } => {
                 write!(f, "[BLOB format={} size={}]", format, size)
+            }
+            PropertyValue::SwitchVector(switches) => {
+                let mut entries: Vec<_> = switches.iter().collect();
+                entries.sort_by(|(a, _), (b, _)| a.cmp(b));
+                let mut result = String::new();
+                for (name, state) in entries {
+                    if !result.is_empty() {
+                        result.push(',');
+                    }
+                    result.push_str(&format!("{}={}", name, if *state { "On" } else { "Off" }));
+                }
+                write!(f, "{}", result)
             }
         }
     }
@@ -346,16 +353,16 @@ mod tests {
     #[test]
     fn test_property_states() {
         assert_eq!(
-            "idle".parse::<PropertyState>().unwrap(),
+            "Idle".parse::<PropertyState>().unwrap(),
             PropertyState::Idle
         );
-        assert_eq!("ok".parse::<PropertyState>().unwrap(), PropertyState::Ok);
+        assert_eq!("Ok".parse::<PropertyState>().unwrap(), PropertyState::Ok);
         assert_eq!(
-            "busy".parse::<PropertyState>().unwrap(),
+            "Busy".parse::<PropertyState>().unwrap(),
             PropertyState::Busy
         );
         assert_eq!(
-            "alert".parse::<PropertyState>().unwrap(),
+            "Alert".parse::<PropertyState>().unwrap(),
             PropertyState::Alert
         );
         assert!("Invalid".parse::<PropertyState>().is_err());
@@ -374,13 +381,15 @@ mod tests {
             format: "fits".to_string(),
             data: vec![0; 100],
         };
+        let switch_vector = PropertyValue::SwitchVector(HashMap::from([("switch1".to_string(), true), ("switch2".to_string(), false)]));
 
         assert_eq!(text.to_string(), "test");
         assert_eq!(num.to_string(), "42");
         assert_eq!(num_fmt.to_string(), "42 m/s");
         assert_eq!(switch_on.to_string(), "On");
         assert_eq!(switch_off.to_string(), "Off");
-        assert_eq!(light.to_string(), "ok");
+        assert_eq!(light.to_string(), "Ok");
         assert_eq!(blob.to_string(), "[BLOB format=fits size=100]");
+        assert_eq!(switch_vector.to_string(), "switch1=On,switch2=Off");
     }
 }

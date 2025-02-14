@@ -79,7 +79,7 @@ async fn connect_camera(client: &Client, device: &str) -> Result<bool> {
         if let PropertyValue::Switch(state) = conn.value {
             if state {
                 info!("Device {} is already connected", device);
-                return Ok(true);
+                Ok(true)
             } else {
                 // Try to connect
                 debug!("Attempting to connect to {}", device);
@@ -118,11 +118,11 @@ async fn connect_camera(client: &Client, device: &str) -> Result<bool> {
                 "CONNECTION property for {} is not a switch property",
                 device
             );
-            return Ok(false);
+            Ok(false)
         }
     } else {
         warn!("Device {} does not have a CONNECTION property", device);
-        return Ok(false);
+        Ok(false)
     }
 }
 

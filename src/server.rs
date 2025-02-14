@@ -1,57 +1,45 @@
 use std::collections::HashMap;
-use std::net::SocketAddr;
 use std::str::FromStr;
 use std::sync::Arc;
-
-use tokio::io::{AsyncBufReadExt, BufReader};
+use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
 use tokio::net::{TcpListener, TcpStream};
-use tokio::sync::RwLock;
-use tracing::{debug, error, info};
+use tokio::sync::Mutex;
+use tracing::{debug, error, info, warn};
 
-use crate::error::{Error, Result};
+use crate::error::Result;
 use crate::message::Message;
-use crate::property::{Property, PropertyState, PropertyValue};
-
-use quick_xml::events::Event;
-use quick_xml::Reader;
-
-/// Default INDI server port
-pub const DEFAULT_PORT: u16 = 7624;
+use crate::property::Property;
 
 /// Server configuration
 #[derive(Debug, Clone)]
 pub struct ServerConfig {
     /// Server address
-    pub bind_address: SocketAddr,
-    /// Maximum number of clients
-    pub max_clients: usize,
-    /// Maximum message size
-    pub max_message_size: usize,
-}
-
-impl Default for ServerConfig {
-    fn default() -> Self {
-        Self {
-            bind_address: format!("0.0.0.0:{}", DEFAULT_PORT).parse().unwrap(),
-            max_clients: 10,
-            max_message_size: 1024 * 1024, // 1MB
-        }
-    }
+    pub bind_addr: String,
 }
 
 /// Server state
 #[derive(Debug, Default)]
 pub struct ServerState {
+    /// Connected clients
+    pub clients: HashMap<String, TcpStream>,
     /// Device properties
     pub properties: HashMap<String, HashMap<String, Property>>,
 }
 
+impl ServerState {
+    /// Create new server state
+    pub fn new() -> Self {
+        Self::default()
+    }
+}
+
 /// INDI server
+#[derive(Debug)]
 pub struct Server {
     /// Server configuration
     config: ServerConfig,
     /// Server state
-    state: Arc<RwLock<ServerState>>,
+    state: Arc<Mutex<ServerState>>,
 }
 
 impl Server {
@@ -59,235 +47,88 @@ impl Server {
     pub fn new(config: ServerConfig) -> Self {
         Self {
             config,
-            state: Arc::new(RwLock::new(ServerState::default())),
+            state: Arc::new(Mutex::new(ServerState::new())),
         }
     }
 
-    /// Starts the server
-    pub async fn run(&mut self) -> Result<()> {
-        info!("Starting INDI server on {}", self.config.bind_address);
-
-        let listener = TcpListener::bind(&self.config.bind_address)
-            .await
-            .map_err(Error::Io)?;
+    /// Start server
+    pub async fn start(&self) -> Result<()> {
+        let listener = TcpListener::bind(&self.config.bind_addr).await?;
+        info!("Server listening on {}", self.config.bind_addr);
 
         loop {
-            let (socket, addr) = listener.accept().await?;
-            if let Err(e) = self.handle_client(socket, addr).await {
-                error!("Client error: {}", e);
+            match listener.accept().await {
+                Ok((socket, addr)) => {
+                    info!("New client connection from {}", addr);
+                    let state = self.state.clone();
+                    tokio::spawn(async move {
+                        if let Err(e) = Self::handle_client(socket, state).await {
+                            error!("Error handling client: {}", e);
+                        }
+                    });
+                }
+                Err(e) => {
+                    error!("Error accepting connection: {}", e);
+                }
             }
         }
     }
 
     /// Handle client connection
-    async fn handle_client(&mut self, socket: TcpStream, addr: SocketAddr) -> Result<()> {
-        info!("New client connected: {}", addr);
-
-        let mut reader = BufReader::new(socket);
-        let mut line = String::new();
-
-        while let Ok(n) = reader.read_line(&mut line).await {
-            if n == 0 {
-                break;
-            }
-
-            if let Ok(message) = Message::from_str(&line) {
-                debug!(message = ?message, "Received message");
-                if let Err(e) = self.handle_message(message).await {
-                    error!("Failed to handle message: {}", e);
-                }
-            }
-
-            line.clear();
-        }
-
-        info!("Client disconnected: {}", addr);
-        Ok(())
-    }
-
-    /// Handle incoming message
-    async fn handle_message(&mut self, message: Message) -> Result<()> {
-        match message {
-            Message::GetProperties { content } => {
-                self.handle_get_properties(&content).await?;
-            }
-            Message::SetProperty { content } => {
-                self.handle_set_property(&content).await?;
-            }
-            Message::DefProperty(property) => {
-                self.handle_def_property(property).await?;
-            }
-            Message::NewProperty(property) => {
-                self.handle_new_property(property).await?;
-            }
-            Message::Message { content } => {
-                info!("Received message: {}", content);
-            }
-        }
-        Ok(())
-    }
-
-    /// Handle GetProperties message
-    async fn handle_get_properties(&mut self, xml: &str) -> Result<()> {
-        let device = parse_attribute(xml, "device").unwrap_or_else(|| "*".to_string());
-
-        let state = self.state.read().await;
-        if device == "*" {
-            // Send all properties
-            for (_device, props) in state.properties.iter() {
-                for prop in props.values() {
-                    let message = Message::DefProperty(prop.clone());
-                    if message.to_xml().is_ok() {
-                        // Send message
-                    }
-                }
-            }
-        } else {
-            // Send properties for specific device
-            if let Some(props) = state.properties.get(&device) {
-                for prop in props.values() {
-                    let message = Message::DefProperty(prop.clone());
-                    if message.to_xml().is_ok() {
-                        // Send message
-                    }
-                }
-            }
-        }
-        Ok(())
-    }
-
-    /// Handle SetProperty message
-    async fn handle_set_property(&mut self, xml: &str) -> Result<()> {
-        let device = parse_attribute(xml, "device")
-            .ok_or_else(|| Error::ParseError("Missing device attribute".into()))?;
-        let name = parse_attribute(xml, "name")
-            .ok_or_else(|| Error::ParseError("Missing name attribute".into()))?;
-
-        let mut state = self.state.write().await;
-        if let Some(props) = state.properties.get_mut(&device) {
-            if let Some(prop) = props.get_mut(&name) {
-                // Update property value
-                let value = parse_element_content(xml, "oneText")
-                    .map(PropertyValue::Text)
-                    .or_else(|| {
-                        parse_element_content(xml, "oneNumber")
-                            .and_then(|s| s.parse::<f64>().ok())
-                            .map(|n| PropertyValue::Number(n, None))
-                    })
-                    .or_else(|| {
-                        parse_element_content(xml, "oneSwitch")
-                            .map(|s| PropertyValue::Switch(s == "On"))
-                    })
-                    .or_else(|| {
-                        parse_element_content(xml, "oneLight")
-                            .and_then(|s| PropertyState::from_str(&s).ok())
-                            .map(PropertyValue::Light)
-                    })
-                    .ok_or_else(|| Error::ParseError("Missing property value".into()))?;
-
-                prop.value = value;
-
-                // Send NewProperty message
-                let message = Message::NewProperty(prop.clone());
-                if message.to_xml().is_ok() {
-                    // Send message
-                }
-            }
-        }
-        Ok(())
-    }
-
-    /// Handle DefProperty message
-    async fn handle_def_property(&mut self, property: Property) -> Result<()> {
-        let xml = property.to_xml().unwrap();
-        let mut reader = Reader::from_str(&xml);
-        reader.config_mut().trim_text(true);
-
-        let mut buf = Vec::new();
+    async fn handle_client(socket: TcpStream, state: Arc<Mutex<ServerState>>) -> Result<()> {
+        let (reader, mut writer) = socket.into_split();
+        let mut reader = BufReader::new(reader);
+        let mut buffer = String::new();
 
         loop {
-            match reader.read_event_into(&mut buf) {
-                Ok(Event::Start(ref e)) => {
-                    debug!(event = ?e, "XML Start event");
-                }
-                Ok(Event::End(ref e)) => {
-                    debug!(event = ?e, "XML End event");
-                }
-                Ok(Event::Eof) => break,
-                Err(e) => {
-                    error!("Error at position {}: {:?}", reader.buffer_position(), e);
+            buffer.clear();
+            match reader.read_line(&mut buffer).await {
+                Ok(0) => {
+                    debug!("Client disconnected");
                     break;
                 }
-                _ => (),
+                Ok(_) => {
+                    debug!("Received message: {}", buffer);
+                    match Message::from_str(&buffer) {
+                        Ok(message) => {
+                            match message {
+                                Message::GetProperties { version, device, name } => {
+                                    debug!("GetProperties request: version={}, device={:?}, name={:?}", version, device, name);
+                                    let state = state.lock().await;
+                                    for (dev, props) in &state.properties {
+                                        if device.as_ref().map_or(true, |d| d == dev) {
+                                            for (prop_name, prop) in props {
+                                                if name.as_ref().map_or(true, |n| n == prop_name) {
+                                                    let msg = Message::DefProperty(prop.clone());
+                                                    let xml = msg.to_xml()?;
+                                                    writer.write_all(xml.as_bytes()).await?;
+                                                    writer.write_all(b"\n").await?;
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                                Message::SetProperty { content } => {
+                                    debug!("SetProperty request: {}", content);
+                                    // Handle property setting
+                                }
+                                _ => {
+                                    debug!("Ignoring message: {:?}", message);
+                                }
+                            }
+                        }
+                        Err(e) => {
+                            warn!("Failed to parse message: {}", e);
+                        }
+                    }
+                }
+                Err(e) => {
+                    error!("Error reading from client: {}", e);
+                    break;
+                }
             }
-            buf.clear();
         }
 
         Ok(())
     }
-
-    /// Handle NewProperty message
-    async fn handle_new_property(&mut self, property: Property) -> Result<()> {
-        let mut state = self.state.write().await;
-        let device = property.device.clone();
-        let name = property.name.clone();
-        state
-            .properties
-            .entry(device)
-            .or_default()
-            .insert(name, property);
-        Ok(())
-    }
-}
-
-fn parse_attribute(xml: &str, attr: &str) -> Option<String> {
-    let mut reader = Reader::from_str(xml);
-    reader.config_mut().trim_text(true);
-
-    let mut buf = Vec::new();
-    loop {
-        match reader.read_event_into(&mut buf) {
-            Ok(Event::Start(e)) | Ok(Event::Empty(e)) => {
-                for attribute in e.attributes().flatten() {
-                    if attribute.key.as_ref() == attr.as_bytes() {
-                        return Some(attribute.unescape_value().unwrap().to_string());
-                    }
-                }
-            }
-            Ok(Event::Eof) => break,
-            _ => {}
-        }
-        buf.clear();
-    }
-    None
-}
-
-fn parse_element_content(xml: &str, element: &str) -> Option<String> {
-    let mut reader = Reader::from_str(xml);
-    reader.config_mut().trim_text(true);
-
-    let mut buf = Vec::new();
-    let mut content = None;
-
-    loop {
-        match reader.read_event_into(&mut buf) {
-            Ok(Event::Start(ref e)) => {
-                if e.name().as_ref() == element.as_bytes() {
-                    if let Ok(Event::Text(e)) = reader.read_event_into(&mut buf) {
-                        content = e.unescape().ok().map(|s| s.to_string());
-                        break;
-                    }
-                }
-            }
-            Ok(Event::Eof) => break,
-            Err(e) => {
-                error!("Error at position {}: {:?}", reader.buffer_position(), e);
-                break;
-            }
-            _ => (),
-        }
-        buf.clear();
-    }
-
-    content
 }
