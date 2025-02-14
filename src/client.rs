@@ -14,7 +14,7 @@ use tracing::{debug, error, info, warn};
 
 use crate::error::{Error, Result};
 use crate::message::Message;
-use crate::property::{Property, PropertyPerm, PropertyState, PropertyValue};
+use crate::property::{Property, PropertyPerm, PropertyState, PropertyValue, SwitchState};
 
 /// Client configuration
 #[derive(Debug, Clone)]
@@ -125,6 +125,27 @@ impl Client {
         values: &[(String, PropertyValue)],
     ) -> Result<()> {
         debug!("Setting property array {}@{} to {:?}", device, name, values);
+
+        // For CONNECTION property, we need to send a special message
+        if name == "CONNECTION" {
+            let mut switches = HashMap::new();
+            for (element_name, value) in values {
+                if let PropertyValue::Switch(state) = value {
+                    switches.insert(element_name.clone(), *state);
+                }
+            }
+            let prop = Property::new(
+                device.to_string(),
+                name.to_string(),
+                PropertyValue::SwitchVector(switches),
+                PropertyState::Ok,
+                PropertyPerm::ReadWrite,
+            );
+            let message = Message::NewProperty(prop);
+            self.write_message(&message).await?;
+            return Ok(());
+        }
+
         let mut props = Vec::new();
         for (element_name, value) in values {
             match value {
@@ -157,6 +178,33 @@ impl Client {
         );
 
         let message = Message::NewProperty(array_prop);
+        self.write_message(&message).await?;
+        Ok(())
+    }
+
+    /// Set a switch vector property for a device
+    pub async fn set_switch_vector(
+        &mut self,
+        device: &str,
+        name: &str,
+        values: &[(String, SwitchState)],
+    ) -> Result<()> {
+        debug!("Setting switch vector {} for device {}", name, device);
+
+        let mut switches = HashMap::new();
+        for (element_name, state) in values {
+            switches.insert(element_name.clone(), *state);
+        }
+
+        let prop = Property::new(
+            device.to_string(),
+            name.to_string(),
+            PropertyValue::SwitchVector(switches),
+            PropertyState::Ok,
+            PropertyPerm::ReadWrite,
+        );
+
+        let message = Message::NewProperty(prop);
         self.write_message(&message).await?;
         Ok(())
     }
@@ -228,13 +276,20 @@ impl Client {
                                                 debug!("Switches: {:?}", switches);
                                                 let mut state = state.lock().await;
                                                 let device_props = state.devices.entry(device.clone()).or_insert_with(HashMap::new);
-                                                
+
                                                 // Create parent property with switches
                                                 let prop = Property::new_with_value(
                                                     device.clone(),
                                                     name.clone(),
                                                     name.clone(), // Use the property name as the element name
-                                                    PropertyValue::SwitchVector(switches.iter().map(|s| (s.name.clone(), s.value.trim() == "On")).collect()),
+                                                    PropertyValue::SwitchVector(
+                                                        switches.iter().map(|s| {
+                                                            (
+                                                                s.name.clone(),
+                                                                if s.value.trim() == "On" { SwitchState::On } else { SwitchState::Off }
+                                                            )
+                                                        }).collect()
+                                                    ),
                                                     prop_state,
                                                     PropertyPerm::from_str(&perm).unwrap_or(PropertyPerm::ReadWrite),
                                                 );
@@ -344,8 +399,17 @@ On
         // Get devices and check
         let devices = client.get_devices().await.expect("Failed to get devices");
         debug!("Found devices: {:?}", devices);
-        assert_eq!(devices.len(), 1, "Expected 1 device, found {}", devices.len());
-        assert_eq!(devices[0], "Telescope Simulator", "Expected Telescope Simulator, found {}", devices[0]);
+        assert_eq!(
+            devices.len(),
+            1,
+            "Expected 1 device, found {}",
+            devices.len()
+        );
+        assert_eq!(
+            devices[0], "Telescope Simulator",
+            "Expected Telescope Simulator, found {}",
+            devices[0]
+        );
 
         // Get properties and check
         let state = client.state.lock().await;
@@ -355,7 +419,10 @@ On
         if let Some(props) = client.get_device_properties("Telescope Simulator").await {
             debug!("Found properties for Telescope Simulator: {:?}", props);
             assert_eq!(props.len(), 1, "Expected 1 property, found {}", props.len());
-            assert!(props.contains_key("CONNECTION"), "Expected CONNECTION property");
+            assert!(
+                props.contains_key("CONNECTION"),
+                "Expected CONNECTION property"
+            );
         } else {
             panic!("No properties found for Telescope Simulator");
         }

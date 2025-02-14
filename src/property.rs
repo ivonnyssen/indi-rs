@@ -5,11 +5,11 @@
 //! types (Number, Text, Switch, etc.), states (Idle, OK, Busy, Alert),
 //! and permissions (RO, WO, RW).
 
+use crate::error::{Error, Result};
+use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::fmt;
 use std::str::FromStr;
-use crate::error::{Error, Result};
-use serde::{Serialize, Deserialize};
 
 /// Property permission
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
@@ -93,6 +93,57 @@ impl fmt::Display for PropertyState {
     }
 }
 
+/// Switch state for INDI switch properties
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub enum SwitchState {
+    /// Switch is On
+    #[serde(rename = "On")]
+    On,
+    /// Switch is Off
+    #[serde(rename = "Off")]
+    Off,
+}
+
+impl FromStr for SwitchState {
+    type Err = Error;
+
+    fn from_str(s: &str) -> Result<Self> {
+        match s.trim() {
+            "On" => Ok(SwitchState::On),
+            "Off" => Ok(SwitchState::Off),
+            _ => Err(Error::Property(format!("Invalid switch state: {}", s))),
+        }
+    }
+}
+
+impl fmt::Display for SwitchState {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            SwitchState::On => write!(f, "On"),
+            SwitchState::Off => write!(f, "Off"),
+        }
+    }
+}
+
+impl From<bool> for SwitchState {
+    fn from(value: bool) -> Self {
+        if value {
+            SwitchState::On
+        } else {
+            SwitchState::Off
+        }
+    }
+}
+
+impl From<SwitchState> for bool {
+    fn from(value: SwitchState) -> Self {
+        match value {
+            SwitchState::On => true,
+            SwitchState::Off => false,
+        }
+    }
+}
+
 /// Property value types supported by INDI
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(untagged)]
@@ -102,7 +153,7 @@ pub enum PropertyValue {
     /// Number value with optional format string
     Number(f64, Option<String>),
     /// Switch value (On/Off)
-    Switch(bool),
+    Switch(SwitchState),
     /// Light value representing a state
     Light(PropertyState),
     /// Binary large object (BLOB)
@@ -115,7 +166,7 @@ pub enum PropertyValue {
         data: Vec<u8>,
     },
     /// Switch vector value
-    SwitchVector(HashMap<String, bool>),
+    SwitchVector(HashMap<String, SwitchState>),
 }
 
 impl Default for PropertyValue {
@@ -130,7 +181,7 @@ impl fmt::Display for PropertyValue {
             PropertyValue::Text(text) => write!(f, "{}", text),
             PropertyValue::Number(num, None) => write!(f, "{}", num),
             PropertyValue::Number(num, Some(fmt_str)) => write!(f, "{} {}", num, fmt_str),
-            PropertyValue::Switch(state) => write!(f, "{}", if *state { "On" } else { "Off" }),
+            PropertyValue::Switch(state) => write!(f, "{}", state),
             PropertyValue::Light(state) => write!(f, "{}", state),
             PropertyValue::Blob { format, size, .. } => {
                 write!(f, "[BLOB format={} size={}]", format, size)
@@ -143,7 +194,7 @@ impl fmt::Display for PropertyValue {
                     if !result.is_empty() {
                         result.push(',');
                     }
-                    result.push_str(&format!("{}={}", name, if *state { "On" } else { "Off" }));
+                    result.push_str(&format!("{}={}", name, state));
                 }
                 write!(f, "{}", result)
             }
@@ -369,19 +420,40 @@ mod tests {
     }
 
     #[test]
+    fn test_switch_state() {
+        // Test FromStr implementation
+        assert_eq!(SwitchState::from_str("On").unwrap(), SwitchState::On);
+        assert_eq!(SwitchState::from_str("Off").unwrap(), SwitchState::Off);
+        assert!(SwitchState::from_str("Invalid").is_err());
+
+        // Test Display implementation
+        assert_eq!(SwitchState::On.to_string(), "On");
+        assert_eq!(SwitchState::Off.to_string(), "Off");
+
+        // Test bool conversion
+        assert!(bool::from(SwitchState::On));
+        assert!(!bool::from(SwitchState::Off));
+        assert_eq!(SwitchState::from(true), SwitchState::On);
+        assert_eq!(SwitchState::from(false), SwitchState::Off);
+    }
+
+    #[test]
     fn test_property_value_display() {
         let text = PropertyValue::Text("test".to_string());
         let num = PropertyValue::Number(42.0, None);
         let num_fmt = PropertyValue::Number(42.0, Some("m/s".to_string()));
-        let switch_on = PropertyValue::Switch(true);
-        let switch_off = PropertyValue::Switch(false);
+        let switch_on = PropertyValue::Switch(SwitchState::On);
+        let switch_off = PropertyValue::Switch(SwitchState::Off);
         let light = PropertyValue::Light(PropertyState::Ok);
         let blob = PropertyValue::Blob {
             size: 100,
             format: "fits".to_string(),
             data: vec![0; 100],
         };
-        let switch_vector = PropertyValue::SwitchVector(HashMap::from([("switch1".to_string(), true), ("switch2".to_string(), false)]));
+        let switch_vector = PropertyValue::SwitchVector(HashMap::from([
+            ("switch1".to_string(), SwitchState::On),
+            ("switch2".to_string(), SwitchState::Off),
+        ]));
 
         assert_eq!(text.to_string(), "test");
         assert_eq!(num.to_string(), "42");
