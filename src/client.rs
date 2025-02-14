@@ -42,12 +42,25 @@ impl ClientState {
     pub fn update(&mut self, message: &Message) {
         match message {
             Message::DefProperty(prop) => {
-                debug!("Got property definition for device '{}', property '{}'", prop.device, prop.name);
+                debug!(
+                    "Got property definition for device '{}', property '{}'",
+                    prop.device, prop.name
+                );
                 let device_props = self.devices.entry(prop.device.clone()).or_default();
                 device_props.insert(prop.name.clone(), prop.clone());
             }
-            Message::DefSwitchVector { device, name, state: prop_state, perm, switches, .. } => {
-                debug!("Got switch vector for device '{}', property '{}'", device, name);
+            Message::DefSwitchVector {
+                device,
+                name,
+                state: prop_state,
+                perm,
+                switches,
+                ..
+            } => {
+                debug!(
+                    "Got switch vector for device '{}', property '{}'",
+                    device, name
+                );
                 debug!("Switches: {:?}", switches);
                 let device_props = self.devices.entry(device.clone()).or_default();
 
@@ -56,12 +69,19 @@ impl ClientState {
                     device.clone(),
                     name.clone(),
                     PropertyValue::SwitchVector(
-                        switches.iter().map(|s| {
-                            (
-                                s.name.clone(),
-                                if s.value.trim() == "On" { SwitchState::On } else { SwitchState::Off }
-                            )
-                        }).collect()
+                        switches
+                            .iter()
+                            .map(|s| {
+                                (
+                                    s.name.clone(),
+                                    if s.value.trim() == "On" {
+                                        SwitchState::On
+                                    } else {
+                                        SwitchState::Off
+                                    },
+                                )
+                            })
+                            .collect(),
                     ),
                     *prop_state,
                     PropertyPerm::from_str(perm).unwrap_or(PropertyPerm::ReadWrite),
@@ -220,7 +240,12 @@ impl Client {
     }
 
     /// Set a switch vector property for a device
-    pub async fn set_switch_vector(&self, device: &str, name: &str, switches: &[(String, SwitchState)]) -> Result<()> {
+    pub async fn set_switch_vector(
+        &self,
+        device: &str,
+        name: &str,
+        switches: &[(String, SwitchState)],
+    ) -> Result<()> {
         debug!(
             "Sending switch vector for device '{}', property '{}', switches: {:?}",
             device, name, switches
@@ -408,8 +433,14 @@ mod tests {
         let (message, is_complete) = Client::try_parse_xml(xml);
         assert!(is_complete);
         assert!(message.is_some());
-        
-        if let Some(Message::DefSwitchVector { device, name, switches, .. }) = message {
+
+        if let Some(Message::DefSwitchVector {
+            device,
+            name,
+            switches,
+            ..
+        }) = message
+        {
             assert_eq!(device, "CCD Simulator");
             assert_eq!(name, "CONNECTION");
             assert_eq!(switches.len(), 2);
@@ -438,7 +469,7 @@ mod tests {
         let (message, is_complete) = Client::try_parse_xml(xml);
         assert!(is_complete);
         assert!(message.is_some());
-        
+
         if let Some(Message::DelProperty { device }) = message {
             assert_eq!(device, "CCD Simulator");
         } else {
@@ -454,7 +485,7 @@ mod tests {
         let (message, is_complete) = Client::try_parse_xml(xml);
         assert!(is_complete);
         assert!(message.is_some());
-        
+
         if let Some(Message::DelProperty { device }) = message {
             assert_eq!(device, "CCD Simulator");
         } else {
@@ -467,8 +498,14 @@ mod tests {
         let (message, is_complete) = Client::try_parse_xml(remaining);
         assert!(is_complete);
         assert!(message.is_some());
-        
-        if let Some(Message::DefSwitchVector { device, name, switches, .. }) = message {
+
+        if let Some(Message::DefSwitchVector {
+            device,
+            name,
+            switches,
+            ..
+        }) = message
+        {
             assert_eq!(device, "CCD Simulator");
             assert_eq!(name, "CONNECTION");
             assert_eq!(switches.len(), 2);
@@ -479,7 +516,8 @@ mod tests {
 
     #[test]
     fn test_try_parse_xml_malformed() {
-        let xml = r#"<defSwitchVector device="CCD Simulator" name="CONNECTION"><badTag>Invalid</badTag>"#;
+        let xml =
+            r#"<defSwitchVector device="CCD Simulator" name="CONNECTION"><badTag>Invalid</badTag>"#;
 
         let (message, is_complete) = Client::try_parse_xml(xml);
         assert!(!is_complete);
@@ -496,7 +534,7 @@ mod tests {
         })
         .await
         .unwrap();
-        
+
         client.connect().await.unwrap();
     }
 
@@ -508,7 +546,7 @@ mod tests {
         })
         .await
         .unwrap();
-        
+
         // But connecting to a non-existent server should fail
         let result = client.connect().await;
         assert!(result.is_err());
@@ -535,14 +573,18 @@ mod tests {
         let server_handle = tokio::spawn(async move {
             let (socket, _) = listener.accept().await.unwrap();
             let mut buf = [0u8; 1024];
-            
+
             // Read client message
             socket.readable().await.unwrap();
             let n = socket.try_read(&mut buf).unwrap();
             assert!(n > 0);
-            
+
             // Send response immediately
-            socket.try_write(b"<setSwitchVector device='CCD Simulator' name='CONNECTION' state='Ok'/>").unwrap();
+            socket
+                .try_write(
+                    b"<setSwitchVector device='CCD Simulator' name='CONNECTION' state='Ok'/>",
+                )
+                .unwrap();
         });
 
         // Connect and send message
@@ -556,7 +598,10 @@ mod tests {
             ("DISCONNECT".to_string(), SwitchState::Off),
         ];
 
-        client.set_switch_vector("CCD Simulator", "CONNECTION", &switches[..]).await.unwrap();
+        client
+            .set_switch_vector("CCD Simulator", "CONNECTION", &switches[..])
+            .await
+            .unwrap();
 
         // Wait for server to finish
         server_handle.await.unwrap();

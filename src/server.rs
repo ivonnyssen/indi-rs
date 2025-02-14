@@ -92,8 +92,15 @@ impl Server {
                     match Message::from_str(&buffer) {
                         Ok(message) => {
                             match message {
-                                Message::GetProperties { version, device, name } => {
-                                    debug!("GetProperties request: version={}, device={:?}, name={:?}", version, device, name);
+                                Message::GetProperties {
+                                    version,
+                                    device,
+                                    name,
+                                } => {
+                                    debug!(
+                                        "GetProperties request: version={}, device={:?}, name={:?}",
+                                        version, device, name
+                                    );
                                     let state = state.lock().await;
                                     for (dev, props) in &state.properties {
                                         if device.as_ref().map_or(true, |d| d == dev) {
