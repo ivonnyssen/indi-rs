@@ -1,0 +1,3 @@
+- check if we have all structures defined by the inid protocol correctly modeled
+- add tests for serialziation/deserialization of all messages
+- capture network traffic of the camera connection with ecos and use that for integration testing

@@ -3,7 +3,7 @@ use serde::{Deserialize, Serialize};
 use std::str::FromStr;
 
 use crate::error::{Error, Result};
-use crate::property::{Property, PropertyState};
+use crate::property::{Property, PropertyState, SwitchRule};
 
 /// INDI message
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -51,38 +51,7 @@ pub enum Message {
     },
     /// Define switch vector message
     #[serde(rename = "defSwitchVector")]
-    DefSwitchVector {
-        /// Device name
-        #[serde(rename = "@device")]
-        device: String,
-        /// Property name
-        #[serde(rename = "@name")]
-        name: String,
-        /// Property label
-        #[serde(rename = "@label", default)]
-        label: String,
-        /// Property group
-        #[serde(rename = "@group", default)]
-        group: String,
-        /// Property state
-        #[serde(rename = "@state")]
-        state: PropertyState,
-        /// Property permission
-        #[serde(rename = "@perm")]
-        perm: String,
-        /// Property rule
-        #[serde(rename = "@rule")]
-        rule: String,
-        /// Property timeout
-        #[serde(rename = "@timeout", default)]
-        timeout: i32,
-        /// Property timestamp
-        #[serde(rename = "@timestamp", default)]
-        timestamp: String,
-        /// Switch elements
-        #[serde(rename = "oneSwitch")]
-        switches: Vec<OneSwitch>,
-    },
+    DefSwitchVector(DefSwitchVector),
     /// Define text vector
     #[serde(rename = "defTextVector")]
     DefTextVector {
@@ -165,26 +134,15 @@ pub enum Message {
 
 /// Switch element in a switch vector
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct DefSwitch {
-    /// Switch name
+pub struct OneSwitch {
+    /// Name of the switch
     #[serde(rename = "@name")]
     pub name: String,
-    /// Switch label
+    /// Label for the switch
     #[serde(rename = "@label")]
     pub label: String,
-    /// Switch value
-    #[serde(rename = "$value")]
-    pub value: String,
-}
-
-/// Switch element in a new switch vector
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct OneSwitch {
-    /// Switch name
-    #[serde(rename = "@name")]
-    pub name: String,
-    /// Switch value
-    #[serde(rename = "$value")]
+    /// Value of the switch (On/Off)
+    #[serde(rename = "$text")]
     pub value: String,
 }
 
@@ -226,6 +184,67 @@ pub struct DefNumber {
     /// Number value
     #[serde(rename = "$value")]
     pub value: String,
+}
+
+/// Represents a switch vector property definition in the INDI protocol.
+/// Contains information about a set of switches including their device, name,
+/// state, and individual switch elements.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename = "defSwitchVector")]
+pub struct DefSwitchVector {
+    /// Device name
+    #[serde(rename = "@device")]
+    pub device: String,
+    /// Property name
+    #[serde(rename = "@name")]
+    pub name: String,
+    /// Property label
+    #[serde(rename = "@label")]
+    #[serde(default)]
+    pub label: String,
+    /// Property group
+    #[serde(rename = "@group")]
+    #[serde(default)]
+    pub group: String,
+    /// Property state
+    #[serde(rename = "@state")]
+    pub state: PropertyState,
+    /// Property permission
+    #[serde(rename = "@perm")]
+    pub perm: String,
+    /// Switch rule
+    #[serde(rename = "@rule")]
+    pub rule: SwitchRule,
+    /// Property timeout
+    #[serde(rename = "@timeout")]
+    #[serde(default)]
+    pub timeout: i32,
+    /// Property timestamp
+    #[serde(rename = "@timestamp")]
+    #[serde(default)]
+    pub timestamp: String,
+    /// Switch elements
+    #[serde(rename = "oneSwitch")]
+    pub switches: Vec<OneSwitch>,
+}
+
+impl DefSwitchVector {
+    /// Validates the switch vector according to its rule
+    pub fn validate(&self) -> Result<()> {
+        let on_count = self.switches.iter().filter(|s| s.value == "On").count();
+
+        match self.rule {
+            SwitchRule::OneOfMany if on_count != 1 => Err(Error::Property(format!(
+                "OneOfMany rule requires exactly one switch to be On, found {}",
+                on_count
+            ))),
+            SwitchRule::AtMostOne if on_count > 1 => Err(Error::Property(format!(
+                "AtMostOne rule allows at most one switch to be On, found {}",
+                on_count
+            ))),
+            _ => Ok(()),
+        }
+    }
 }
 
 impl Message {
@@ -302,30 +321,30 @@ mod tests {
     #[test]
     fn test_parse_def_switch_vector() {
         let xml = r#"<defSwitchVector device="Telescope Simulator" name="CONNECTION" label="Connection" group="Main Control" state="Idle" perm="rw" rule="OneOfMany" timeout="60" timestamp="2025-02-14T00:42:55">
- <oneSwitch name="CONNECT" label="Connect">
-Off
- </oneSwitch>
- <oneSwitch name="DISCONNECT" label="Disconnect">
-On
- </oneSwitch>
+<oneSwitch name="CONNECT" label="Connect">Off</oneSwitch>
+<oneSwitch name="DISCONNECT" label="Disconnect">On</oneSwitch>
 </defSwitchVector>"#;
         let parsed = Message::from_str(xml).unwrap();
         match parsed {
-            Message::DefSwitchVector {
-                device,
-                name,
-                switches,
-                ..
-            } => {
-                assert_eq!(device, "Telescope Simulator");
-                assert_eq!(name, "CONNECTION");
-                assert_eq!(switches.len(), 2);
-                assert_eq!(switches[0].name, "CONNECT");
-                assert_eq!(switches[0].value, "Off");
-                assert_eq!(switches[1].name, "DISCONNECT");
-                assert_eq!(switches[1].value, "On");
+            Message::DefSwitchVector(def_switch) => {
+                assert_eq!(def_switch.device, "Telescope Simulator");
+                assert_eq!(def_switch.name, "CONNECTION");
+                assert_eq!(def_switch.label, "Connection");
+                assert_eq!(def_switch.group, "Main Control");
+                assert_eq!(def_switch.state, PropertyState::Idle);
+                assert_eq!(def_switch.perm, "rw");
+                assert_eq!(def_switch.rule, SwitchRule::OneOfMany);
+                assert_eq!(def_switch.timeout, 60);
+                assert_eq!(def_switch.timestamp, "2025-02-14T00:42:55");
+                assert_eq!(def_switch.switches.len(), 2);
+                assert_eq!(def_switch.switches[0].name, "CONNECT");
+                assert_eq!(def_switch.switches[0].label, "Connect");
+                assert_eq!(def_switch.switches[0].value.trim(), "Off");
+                assert_eq!(def_switch.switches[1].name, "DISCONNECT");
+                assert_eq!(def_switch.switches[1].label, "Disconnect");
+                assert_eq!(def_switch.switches[1].value.trim(), "On");
             }
-            _ => panic!("Wrong message type"),
+            _ => panic!("Expected DefSwitchVector"),
         }
     }
 }

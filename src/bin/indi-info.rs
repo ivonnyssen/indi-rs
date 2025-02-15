@@ -2,7 +2,8 @@ use clap::Parser;
 use colored::{ColoredString, Colorize};
 use indi_rs::client::{Client, ClientConfig};
 use indi_rs::error::Result;
-use indi_rs::property::{PropertyState, PropertyValue, SwitchState};
+use indi_rs::property::{PropertyState, PropertyValue};
+use std::collections::HashMap;
 use std::time::Duration;
 use tracing::{debug, info, warn};
 
@@ -32,36 +33,41 @@ async fn is_camera(client: &Client, device: &str) -> bool {
     debug!("Checking if {} is a camera device", device);
 
     // Wait for all properties to be exposed
-    for i in 0..5 {
+    for i in 0..10 {
         debug!("Attempt {} to get properties for {}", i + 1, device);
         tokio::time::sleep(tokio::time::Duration::from_millis(1000)).await;
 
         if let Some(properties) = client.get_device_properties(device).await {
             debug!("Found {} properties for {}", properties.len(), device);
+
+            // Print all properties for debugging
             for (key, prop) in properties.iter() {
                 debug!("Property: {} = {:?}", key, prop);
             }
 
             // Look for common camera properties or check device name
-            if device.contains("CCD") || device.contains("CAMERA") {
+            if device.to_uppercase().contains("CCD") || device.to_uppercase().contains("CAMERA") {
                 debug!("Device name indicates it's a camera");
                 return true;
             }
 
-            let camera_props: Vec<_> = properties
-                .keys()
-                .filter(|prop| {
-                    prop.contains("CCD")
-                        || prop.contains("CAMERA")
-                        || prop.contains("GUIDER")
-                        || prop.contains("FOCUS")
-                })
-                .collect();
-
-            if !camera_props.is_empty() {
-                debug!("Found camera properties: {:?}", camera_props);
-                return true;
+            // Check for any property that might indicate it's a camera
+            for prop_name in properties.keys() {
+                let prop_upper = prop_name.to_uppercase();
+                if prop_upper.contains("CCD")
+                    || prop_upper.contains("CAMERA")
+                    || prop_upper.contains("GUIDER")
+                    || prop_upper.contains("FOCUS")
+                    || prop_upper.contains("EXPOSURE")
+                    || prop_upper.contains("FRAME")
+                    || prop_upper.contains("CAPTURE")
+                {
+                    debug!("Found camera property: {}", prop_name);
+                    return true;
+                }
             }
+        } else {
+            debug!("No properties found for {} on attempt {}", device, i + 1);
         }
     }
 
@@ -74,12 +80,12 @@ async fn disable_simulation(client: &mut Client, device: &str) -> Result<bool> {
     info!("Disabling simulation mode for: {}", device);
 
     // Set SIMULATION to Off
-    let switches = vec![
-        ("ENABLE".to_string(), SwitchState::Off),
-        ("DISABLE".to_string(), SwitchState::On),
-    ];
+    let mut switches = HashMap::new();
+    switches.insert("ENABLE".to_string(), false);
+    switches.insert("DISABLE".to_string(), true);
+
     client
-        .set_switch_vector(device, "SIMULATION", &switches)
+        .set_switch_vector(device, "SIMULATION", switches)
         .await?;
 
     Ok(true)
@@ -91,9 +97,12 @@ async fn enable_simulation(client: &mut Client, device: &str) -> Result<()> {
     info!("Enabling simulation mode for: {}", device);
 
     // Set SIMULATION to On
-    let switches = vec![("ENABLE".to_string(), SwitchState::On)];
+    let mut switches = HashMap::new();
+    switches.insert("ENABLE".to_string(), true);
+    switches.insert("DISABLE".to_string(), false);
+
     client
-        .set_switch_vector(device, "SIMULATION", &switches)
+        .set_switch_vector(device, "SIMULATION", switches)
         .await?;
 
     Ok(())
@@ -107,13 +116,21 @@ async fn connect_camera(client: &mut Client, device: &str) -> Result<bool> {
     debug!("Waiting for properties to be defined");
     let mut retries = 0;
     let properties = loop {
+        // Request CONNECTION property explicitly
+        if retries % 5 == 0 {
+            debug!("Requesting CONNECTION property for device {}", device);
+            client
+                .get_properties(Some(device), Some("CONNECTION"))
+                .await?;
+        }
+
         if let Some(props) = client.get_device_properties(device).await {
             debug!("Found properties for {}: {:?}", device, props.keys());
             if props.contains_key("CONNECTION") {
                 break props;
             }
         }
-        if retries > 10 {
+        if retries > 30 {
             warn!("Timeout waiting for CONNECTION property from {}", device);
             return Ok(false);
         }
@@ -127,18 +144,12 @@ async fn connect_camera(client: &mut Client, device: &str) -> Result<bool> {
 
         // Try to connect
         debug!("Attempting to connect to {}", device);
-        let switches = vec![
-            (
-                "CONNECT".to_string(),
-                PropertyValue::Switch(SwitchState::On),
-            ),
-            (
-                "DISCONNECT".to_string(),
-                PropertyValue::Switch(SwitchState::Off),
-            ),
-        ];
+        let mut switches = HashMap::new();
+        switches.insert("CONNECT".to_string(), true);
+        switches.insert("DISCONNECT".to_string(), false);
+
         client
-            .set_property_array(device, "CONNECTION", &switches)
+            .set_switch_vector(device, "CONNECTION", switches)
             .await?;
 
         // Wait for the connection to be established
@@ -194,14 +205,20 @@ async fn main() -> Result<()> {
     info!("Sending initial GetProperties message");
     client.get_properties(None, None).await?;
 
-    // Wait for devices to be discovered
-    tokio::time::sleep(Duration::from_millis(2000)).await;
+    // Wait longer for devices to be discovered
+    info!("Waiting for devices to be discovered...");
+    tokio::time::sleep(Duration::from_secs(5)).await;
 
     // Get list of devices
     let devices = client.get_devices().await?;
+    debug!("Found {} devices", devices.len());
+    for device in &devices {
+        debug!("Device: {}", device);
+    }
+
     let mut cameras = Vec::new();
 
-    // Print device info
+    // Print device info and check for cameras
     for device in devices {
         if let Some(properties) = client.get_device_properties(&device).await {
             println!("\nDevice: {}", device);

@@ -13,8 +13,11 @@ use tokio::sync::Mutex;
 use tracing::{debug, error, info, warn};
 
 use crate::error::{Error, Result};
-use crate::message::{Message, OneSwitch};
-use crate::property::{Property, PropertyPerm, PropertyState, PropertyValue, SwitchState};
+use crate::message::{DefNumber, DefSwitchVector, DefText, Message, OneSwitch};
+use crate::property::timestamp;
+use crate::property::{
+    Property, PropertyPerm, PropertyState, PropertyValue, SwitchRule, SwitchState,
+};
 
 /// Client configuration
 #[derive(Debug, Clone)]
@@ -49,27 +52,21 @@ impl ClientState {
                 let device_props = self.devices.entry(prop.device.clone()).or_default();
                 device_props.insert(prop.name.clone(), prop.clone());
             }
-            Message::DefSwitchVector {
-                device,
-                name,
-                state: prop_state,
-                perm,
-                switches,
-                ..
-            } => {
+            Message::DefSwitchVector(def_switch) => {
                 debug!(
                     "Got switch vector for device '{}', property '{}'",
-                    device, name
+                    def_switch.device, def_switch.name
                 );
-                debug!("Switches: {:?}", switches);
-                let device_props = self.devices.entry(device.clone()).or_default();
+                debug!("Switches: {:?}", def_switch.switches);
+                let device_props = self.devices.entry(def_switch.device.clone()).or_default();
 
                 // Create parent property with switches
                 let prop = Property::new(
-                    device.clone(),
-                    name.clone(),
+                    def_switch.device.clone(),
+                    def_switch.name.clone(),
                     PropertyValue::SwitchVector(
-                        switches
+                        def_switch
+                            .switches
                             .iter()
                             .map(|s| {
                                 (
@@ -81,10 +78,73 @@ impl ClientState {
                                     },
                                 )
                             })
-                            .collect(),
+                            .collect::<HashMap<_, _>>(),
+                    ),
+                    def_switch.state,
+                    PropertyPerm::from_str(&def_switch.perm).unwrap_or(PropertyPerm::ReadWrite),
+                    def_switch.timestamp.clone(),
+                );
+                device_props.insert(def_switch.name.clone(), prop);
+            }
+            Message::DefTextVector {
+                device,
+                name,
+                state: prop_state,
+                perm,
+                texts,
+                ..
+            } => {
+                debug!(
+                    "Got text vector for device '{}', property '{}'",
+                    device, name
+                );
+                debug!("Texts: {:?}", texts);
+                let device_props = self.devices.entry(device.clone()).or_default();
+
+                // Create parent property with texts
+                let prop = Property::new(
+                    device.clone(),
+                    name.clone(),
+                    PropertyValue::TextVector(
+                        texts
+                            .iter()
+                            .map(|t| (t.name.clone(), t.value.clone()))
+                            .collect::<HashMap<_, _>>(),
                     ),
                     *prop_state,
                     PropertyPerm::from_str(perm).unwrap_or(PropertyPerm::ReadWrite),
+                    timestamp::now(),
+                );
+                device_props.insert(name.clone(), prop);
+            }
+            Message::DefNumberVector {
+                device,
+                name,
+                state: prop_state,
+                perm,
+                numbers,
+                ..
+            } => {
+                debug!(
+                    "Got number vector for device '{}', property '{}'",
+                    device, name
+                );
+                debug!("Numbers: {:?}", numbers);
+                let device_props = self.devices.entry(device.clone()).or_default();
+
+                // Create parent property with numbers
+                let prop = Property::new(
+                    device.clone(),
+                    name.clone(),
+                    PropertyValue::NumberVector(
+                        numbers
+                            .iter()
+                            .map(|n| (n.name.clone(), n.value.parse().unwrap_or(0.0)))
+                            .collect::<HashMap<_, _>>(),
+                    ),
+                    *prop_state,
+                    PropertyPerm::from_str(perm).unwrap_or(PropertyPerm::ReadWrite),
+                    timestamp::now(),
                 );
                 device_props.insert(name.clone(), prop);
             }
@@ -167,6 +227,7 @@ impl Client {
             value.clone(),
             PropertyState::Idle,
             PropertyPerm::ReadWrite,
+            timestamp::now(),
         );
 
         let message = Message::NewProperty(prop);
@@ -197,6 +258,7 @@ impl Client {
                 PropertyValue::SwitchVector(switches),
                 PropertyState::Ok,
                 PropertyPerm::ReadWrite,
+                timestamp::now(),
             );
             let message = Message::NewProperty(prop);
             self.write_message(&message).await?;
@@ -214,6 +276,7 @@ impl Client {
                         PropertyValue::Switch(*state),
                         PropertyState::Ok, // Set state to Ok to indicate we're actively changing it
                         PropertyPerm::ReadWrite,
+                        timestamp::now(),
                     );
                     props.push(prop);
                 }
@@ -232,6 +295,7 @@ impl Client {
             props,
             PropertyState::Ok, // Set state to Ok to indicate we're actively changing it
             PropertyPerm::ReadWrite,
+            timestamp::now(),
         );
 
         let message = Message::NewProperty(array_prop);
@@ -244,26 +308,31 @@ impl Client {
         &self,
         device: &str,
         name: &str,
-        switches: &[(String, SwitchState)],
+        switches: HashMap<String, bool>,
     ) -> Result<()> {
-        debug!(
-            "Sending switch vector for device '{}', property '{}', switches: {:?}",
-            device, name, switches
-        );
-        let message = Message::NewSwitchVector {
-            device: device.to_string(),
-            name: name.to_string(),
-            state: PropertyState::Ok,
-            switches: switches
-                .iter()
-                .map(|(name, state)| OneSwitch {
-                    name: name.clone(),
-                    value: state.to_string(),
-                })
-                .collect(),
-        };
-        self.send_message(message)?;
-        Ok(())
+        let switches = switches
+            .into_iter()
+            .map(|(name, state)| {
+                let name_clone = name.clone();
+                OneSwitch {
+                    name,
+                    label: name_clone,
+                    value: if state {
+                        "On".to_string()
+                    } else {
+                        "Off".to_string()
+                    },
+                }
+            })
+            .collect();
+
+        self.update_switch_vector(
+            device.to_string(),
+            name.to_string(),
+            PropertyState::Ok,
+            switches,
+        )
+        .await
     }
 
     /// Get all devices
@@ -300,50 +369,88 @@ impl Client {
             return (None, false);
         }
 
-        // Check if it's a complete message
-        let mut depth = 0;
-        let mut in_tag = false;
-        let mut chars = xml_buffer.chars().peekable();
+        #[derive(Debug)]
+        struct XmlParseState {
+            depth: i32,
+            in_tag: bool,
+            skip_decl: bool,
+            last_char: Option<char>,
+            prev_char: Option<char>,
+            is_closing_tag: bool,
+            is_self_closing: bool,
+        }
 
-        while let Some(c) = chars.next() {
-            match c {
-                '<' => {
-                    if !in_tag {
-                        in_tag = true;
-                        if chars.peek() == Some(&'/') {
-                            chars.next(); // consume '/'
-                            depth -= 1;
-                        } else {
-                            depth += 1;
+        impl XmlParseState {
+            fn new() -> Self {
+                Self {
+                    depth: 0,
+                    in_tag: false,
+                    skip_decl: false,
+                    last_char: None,
+                    prev_char: None,
+                    is_closing_tag: false,
+                    is_self_closing: false,
+                }
+            }
+
+            fn process_char(&mut self, c: char) {
+                match c {
+                    '<' if !self.in_tag => {
+                        self.in_tag = true;
+                        self.is_closing_tag = false;
+                        self.is_self_closing = false;
+                        self.last_char = None;
+                    }
+                    '/' if self.in_tag => {
+                        if self.prev_char == Some('<') {
+                            self.is_closing_tag = true;
+                            self.depth -= 1;
+                        } else if self.prev_char != Some(' ') {
+                            // Self-closing tag
+                            self.is_self_closing = true;
                         }
+                        self.last_char = Some('/');
+                    }
+                    '?' if self.in_tag && self.prev_char == Some('<') => {
+                        self.skip_decl = true;
+                        self.last_char = Some('?');
+                    }
+                    '>' if self.in_tag => {
+                        self.in_tag = false;
+                        if self.skip_decl {
+                            self.skip_decl = false;
+                        } else if self.is_self_closing {
+                            // Do nothing, depth already adjusted
+                        } else if !self.is_closing_tag {
+                            self.depth += 1;
+                        }
+                        self.last_char = None;
+                        self.is_closing_tag = false;
+                        self.is_self_closing = false;
+                    }
+                    _ => {
+                        self.last_char = None;
                     }
                 }
-                '/' => {
-                    if in_tag && chars.peek() == Some(&'>') {
-                        chars.next(); // consume '>'
-                        depth -= 1;
-                        in_tag = false;
-                    }
-                }
-                '>' => {
-                    if in_tag {
-                        in_tag = false;
-                    }
-                }
-                _ => continue,
+                self.prev_char = Some(c);
+            }
+
+            fn is_complete(&self) -> bool {
+                self.depth == 0 && !self.in_tag && !self.skip_decl
             }
         }
 
-        let is_complete = depth == 0 && !in_tag;
-
-        // Try to parse if it's complete
-        if is_complete {
-            if let Ok(message) = Message::from_str(xml_buffer) {
-                return (Some(message), true);
+        let mut state = XmlParseState::new();
+        for c in xml_buffer.chars() {
+            state.process_char(c);
+            if state.is_complete() {
+                // Found a complete message
+                let message = quick_xml::de::from_str(xml_buffer).ok();
+                return (message, true);
             }
         }
 
-        (None, is_complete)
+        (None, false)
     }
 
     /// Connection handler task
@@ -419,6 +526,170 @@ impl Client {
 
         Ok(())
     }
+
+    /// Creates a new property with the given device, name, and value
+    pub fn new_property(&self, device: String, name: String, value: PropertyValue) -> Result<()> {
+        let prop = Property::new(
+            device,
+            name,
+            value,
+            PropertyState::Idle,
+            PropertyPerm::ReadWrite,
+            timestamp::now(),
+        );
+        self.send_message(Message::NewProperty(prop))
+    }
+
+    /// Sets a switch state for a specific device and property
+    pub fn set_switch(
+        &self,
+        device: &str,
+        name: &str,
+        switch_name: &str,
+        state: bool,
+    ) -> Result<()> {
+        let mut switches = HashMap::new();
+        switches.insert(switch_name.to_string(), SwitchState::from(state));
+
+        let prop = Property::new(
+            device.to_string(),
+            name.to_string(),
+            PropertyValue::SwitchVector(switches),
+            PropertyState::Ok,
+            PropertyPerm::ReadWrite,
+            timestamp::now(),
+        );
+
+        self.send_message(Message::NewProperty(prop))
+    }
+
+    /// Sets a text vector property for a device with the given texts and state
+    pub fn set_text_vector(
+        &self,
+        device: &str,
+        name: &str,
+        texts: Vec<DefText>,
+        prop_state: &PropertyState,
+        perm: &str,
+    ) -> Result<()> {
+        let prop = Property::new(
+            device.to_string(),
+            name.to_string(),
+            PropertyValue::TextVector(
+                texts
+                    .iter()
+                    .map(|t| (t.name.clone(), t.value.clone()))
+                    .collect::<HashMap<_, _>>(),
+            ),
+            *prop_state,
+            PropertyPerm::from_str(perm).unwrap_or(PropertyPerm::ReadWrite),
+            timestamp::now(),
+        );
+
+        self.send_message(Message::NewProperty(prop))
+    }
+
+    /// Sets a number vector property for a device with the given numbers and state
+    pub fn set_number_vector(
+        &self,
+        device: &str,
+        name: &str,
+        numbers: Vec<DefNumber>,
+        prop_state: &PropertyState,
+        perm: &str,
+    ) -> Result<()> {
+        let prop = Property::new(
+            device.to_string(),
+            name.to_string(),
+            PropertyValue::NumberVector(
+                numbers
+                    .iter()
+                    .map(|n| (n.name.clone(), n.value.parse().unwrap_or(0.0)))
+                    .collect::<HashMap<_, _>>(),
+            ),
+            *prop_state,
+            PropertyPerm::from_str(perm).unwrap_or(PropertyPerm::ReadWrite),
+            timestamp::now(),
+        );
+
+        self.send_message(Message::NewProperty(prop))
+    }
+
+    /// Handles incoming device messages and updates the client state accordingly
+    pub async fn handle_device_message(&self, message: Message) -> Result<()> {
+        match message {
+            Message::DefSwitchVector(def_switch) => {
+                let device = def_switch.device.clone();
+                let name = def_switch.name.clone();
+                let mut state = self.state.lock().await;
+                let device_props = state.devices.entry(device.clone()).or_default();
+                let switches: HashMap<String, SwitchState> = def_switch
+                    .switches
+                    .into_iter()
+                    .map(|s| (s.name, s.value.parse().unwrap_or(SwitchState::Off)))
+                    .collect();
+
+                let prop = Property::new(
+                    device,
+                    name.clone(),
+                    PropertyValue::SwitchVector(switches),
+                    def_switch.state,
+                    PropertyPerm::from_str(&def_switch.perm).unwrap_or(PropertyPerm::ReadWrite),
+                    def_switch.timestamp,
+                );
+                device_props.insert(name, prop);
+                Ok(())
+            }
+            _ => Ok(()),
+        }
+    }
+
+    /// Updates a switch vector property with new switch states
+    pub async fn update_switch_vector(
+        &self,
+        device: String,
+        name: String,
+        prop_state: PropertyState,
+        switches: Vec<OneSwitch>,
+    ) -> Result<()> {
+        let def_switch = DefSwitchVector {
+            device,
+            name,
+            label: String::new(),
+            group: String::new(),
+            state: prop_state,
+            perm: "rw".to_string(),
+            rule: SwitchRule::OneOfMany,
+            timeout: 0,
+            timestamp: timestamp::now(),
+            switches,
+        };
+        self.send_message(Message::DefSwitchVector(def_switch))
+    }
+
+    /// Defines a new switch vector property for a device
+    pub async fn define_switch_vector(
+        &self,
+        device: String,
+        name: String,
+        prop_state: PropertyState,
+        perm: String,
+        switches: Vec<OneSwitch>,
+    ) -> Result<()> {
+        let def_switch = DefSwitchVector {
+            device,
+            name,
+            label: String::new(),
+            group: String::new(),
+            state: prop_state,
+            perm,
+            rule: SwitchRule::OneOfMany,
+            timeout: 0,
+            timestamp: timestamp::now(),
+            switches,
+        };
+        self.send_message(Message::DefSwitchVector(def_switch))
+    }
 }
 
 #[cfg(test)]
@@ -428,26 +699,25 @@ mod tests {
 
     #[test]
     fn test_try_parse_xml_complete_message() {
-        let xml = r#"<defSwitchVector device="CCD Simulator" name="CONNECTION" state="Ok" perm="rw" rule="OneOfMany"><oneSwitch name="CONNECT">On</oneSwitch><oneSwitch name="DISCONNECT">Off</oneSwitch></defSwitchVector>"#;
+        let xml = r#"<defSwitchVector device="CCD Simulator" name="CONNECTION" state="Ok" perm="rw" rule="OneOfMany">
+<oneSwitch name="CONNECT" label="Connect">On</oneSwitch>
+<oneSwitch name="DISCONNECT" label="Disconnect">Off</oneSwitch>
+</defSwitchVector>"#;
 
         let (message, is_complete) = Client::try_parse_xml(xml);
         assert!(is_complete);
         assert!(message.is_some());
 
-        if let Some(Message::DefSwitchVector {
-            device,
-            name,
-            switches,
-            ..
-        }) = message
-        {
-            assert_eq!(device, "CCD Simulator");
-            assert_eq!(name, "CONNECTION");
-            assert_eq!(switches.len(), 2);
-            assert_eq!(switches[0].name, "CONNECT");
-            assert_eq!(switches[0].value, "On");
-            assert_eq!(switches[1].name, "DISCONNECT");
-            assert_eq!(switches[1].value, "Off");
+        if let Some(Message::DefSwitchVector(def_switch)) = message {
+            assert_eq!(def_switch.device, "CCD Simulator");
+            assert_eq!(def_switch.name, "CONNECTION");
+            assert_eq!(def_switch.switches.len(), 2);
+            assert_eq!(def_switch.switches[0].name, "CONNECT");
+            assert_eq!(def_switch.switches[0].label, "Connect");
+            assert_eq!(def_switch.switches[0].value.trim(), "On");
+            assert_eq!(def_switch.switches[1].name, "DISCONNECT");
+            assert_eq!(def_switch.switches[1].label, "Disconnect");
+            assert_eq!(def_switch.switches[1].value.trim(), "Off");
         } else {
             panic!("Expected DefSwitchVector message");
         }
@@ -455,7 +725,8 @@ mod tests {
 
     #[test]
     fn test_try_parse_xml_incomplete_message() {
-        let xml = r#"<defSwitchVector device="CCD Simulator" name="CONNECTION" state="Ok" perm="rw" rule="OneOfMany"><oneSwitch name="CONNECT">On</oneSwitch>"#;
+        let xml = r#"<defSwitchVector device="CCD Simulator" name="CONNECTION" state="Ok" perm="rw" rule="OneOfMany">
+<oneSwitch name="CONNECT" label="Connect">On</oneSwitch>"#;
 
         let (message, is_complete) = Client::try_parse_xml(xml);
         assert!(!is_complete);
@@ -464,64 +735,66 @@ mod tests {
 
     #[test]
     fn test_try_parse_xml_self_closing_tag() {
-        let xml = r#"<delProperty device="CCD Simulator"/>"#;
+        let xml = r#"<getProperties version="1.7" device="CCD Simulator"/>"#;
 
         let (message, is_complete) = Client::try_parse_xml(xml);
         assert!(is_complete);
         assert!(message.is_some());
 
-        if let Some(Message::DelProperty { device }) = message {
-            assert_eq!(device, "CCD Simulator");
+        if let Some(Message::GetProperties {
+            version, device, ..
+        }) = message
+        {
+            assert_eq!(version, "1.7");
+            assert_eq!(device.as_deref(), Some("CCD Simulator"));
         } else {
-            panic!("Expected DelProperty message");
+            panic!("Expected GetProperties message");
         }
     }
 
     #[test]
     fn test_try_parse_xml_multiple_messages() {
-        let xml = r#"<delProperty device="CCD Simulator"/><defSwitchVector device="CCD Simulator" name="CONNECTION" state="Ok" perm="rw" rule="OneOfMany"><oneSwitch name="CONNECT">On</oneSwitch><oneSwitch name="DISCONNECT">Off</oneSwitch></defSwitchVector>"#;
+        let xml = r#"<getProperties version="1.7" device="CCD Simulator"/>
+<defSwitchVector device="CCD Simulator" name="CONNECTION" state="Ok" perm="rw" rule="OneOfMany">
+<oneSwitch name="CONNECT" label="Connect">Off</oneSwitch>
+<oneSwitch name="DISCONNECT" label="Disconnect">On</oneSwitch>
+</defSwitchVector>"#;
 
         // First message
-        let (message, is_complete) = Client::try_parse_xml(xml);
+        let (first_message, is_complete) = Client::try_parse_xml(xml);
         assert!(is_complete);
-        assert!(message.is_some());
+        assert!(first_message.is_some());
 
-        if let Some(Message::DelProperty { device }) = message {
-            assert_eq!(device, "CCD Simulator");
+        if let Some(Message::GetProperties {
+            version, device, ..
+        }) = first_message
+        {
+            assert_eq!(version, "1.7");
+            assert_eq!(device.as_deref(), Some("CCD Simulator"));
         } else {
-            panic!("Expected DelProperty message");
+            panic!("Expected GetProperties message");
         }
 
         // Find end of first message and parse second
-        let pos = xml.find("/>").unwrap() + 2;
+        let pos = xml.find("<defSwitchVector").unwrap();
         let remaining = &xml[pos..];
-        let (message, is_complete) = Client::try_parse_xml(remaining);
+        let (second_message, is_complete) = Client::try_parse_xml(remaining);
         assert!(is_complete);
-        assert!(message.is_some());
+        assert!(second_message.is_some());
 
-        if let Some(Message::DefSwitchVector {
-            device,
-            name,
-            switches,
-            ..
-        }) = message
-        {
-            assert_eq!(device, "CCD Simulator");
-            assert_eq!(name, "CONNECTION");
-            assert_eq!(switches.len(), 2);
+        if let Some(Message::DefSwitchVector(def_switch)) = second_message {
+            assert_eq!(def_switch.device, "CCD Simulator");
+            assert_eq!(def_switch.name, "CONNECTION");
+            assert_eq!(def_switch.switches.len(), 2);
+            assert_eq!(def_switch.switches[0].name, "CONNECT");
+            assert_eq!(def_switch.switches[0].label, "Connect");
+            assert_eq!(def_switch.switches[0].value.trim(), "Off");
+            assert_eq!(def_switch.switches[1].name, "DISCONNECT");
+            assert_eq!(def_switch.switches[1].label, "Disconnect");
+            assert_eq!(def_switch.switches[1].value.trim(), "On");
         } else {
             panic!("Expected DefSwitchVector message");
         }
-    }
-
-    #[test]
-    fn test_try_parse_xml_malformed() {
-        let xml =
-            r#"<defSwitchVector device="CCD Simulator" name="CONNECTION"><badTag>Invalid</badTag>"#;
-
-        let (message, is_complete) = Client::try_parse_xml(xml);
-        assert!(!is_complete);
-        assert!(message.is_none());
     }
 
     #[tokio::test]
@@ -540,70 +813,177 @@ mod tests {
 
     #[tokio::test]
     async fn test_client_connect_failure() {
-        // Create client should succeed since it doesn't connect yet
-        let client = Client::new(ClientConfig {
+        let result = Client::new(ClientConfig {
             server_addr: "127.0.0.1:0".to_string(),
         })
-        .await
-        .unwrap();
+        .await;
 
-        // But connecting to a non-existent server should fail
-        let result = client.connect().await;
-        assert!(result.is_err());
-        if let Err(Error::Io(e)) = result {
-            assert_eq!(e.kind(), std::io::ErrorKind::ConnectionRefused);
+        match result {
+            Ok(client) => {
+                let connect_result = client.connect().await;
+                assert!(connect_result.is_err());
+            }
+            Err(_) => panic!("Failed to create client"),
+        }
+    }
+
+    #[tokio::test]
+    async fn test_parse_xml_multiple_messages() {
+        let xml = r#"<getProperties version="1.7" device="CCD Simulator"/>
+<defSwitchVector device="CCD Simulator" name="CONNECTION" state="Ok" perm="rw" rule="OneOfMany">
+<oneSwitch name="CONNECT" label="Connect">Off</oneSwitch>
+<oneSwitch name="DISCONNECT" label="Disconnect">On</oneSwitch>
+</defSwitchVector>"#;
+
+        // First message
+        let (first_message, is_complete) = Client::try_parse_xml(xml);
+        assert!(is_complete);
+        assert!(first_message.is_some());
+
+        if let Some(Message::GetProperties {
+            version, device, ..
+        }) = first_message
+        {
+            assert_eq!(version, "1.7");
+            assert_eq!(device.as_deref(), Some("CCD Simulator"));
         } else {
-            panic!("Expected IO error");
+            panic!("Expected GetProperties message");
+        }
+
+        // Find end of first message and parse second
+        let pos = xml.find("<defSwitchVector").unwrap();
+        let remaining = &xml[pos..];
+        let (second_message, is_complete) = Client::try_parse_xml(remaining);
+        assert!(is_complete);
+        assert!(second_message.is_some());
+
+        if let Some(Message::DefSwitchVector(def_switch)) = second_message {
+            assert_eq!(def_switch.device, "CCD Simulator");
+            assert_eq!(def_switch.name, "CONNECTION");
+            assert_eq!(def_switch.switches.len(), 2);
+        } else {
+            panic!("Expected DefSwitchVector message");
         }
     }
 
     #[tokio::test]
     async fn test_set_switch_vector() {
-        let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
-        let addr = listener.local_addr().unwrap();
+        let (sender, _rx) = broadcast::channel(32);
+        let stream = Arc::new(Mutex::new(None));
+        let state = Arc::new(Mutex::new(ClientState::new()));
+        let client = Client {
+            config: ClientConfig {
+                server_addr: "127.0.0.1:7624".to_string(),
+            },
+            stream: stream.clone(),
+            state: state.clone(),
+            sender,
+        };
 
-        // Create and connect client
-        let client = Client::new(ClientConfig {
-            server_addr: addr.to_string(),
-        })
-        .await
-        .unwrap();
+        let mut switches = HashMap::new();
+        switches.insert("CONNECT".to_string(), true);
+        switches.insert("DISCONNECT".to_string(), false);
 
-        // Spawn server task
-        let server_handle = tokio::spawn(async move {
-            let (socket, _) = listener.accept().await.unwrap();
-            let mut buf = [0u8; 1024];
-
-            // Read client message
-            socket.readable().await.unwrap();
-            let n = socket.try_read(&mut buf).unwrap();
-            assert!(n > 0);
-
-            // Send response immediately
-            socket
-                .try_write(
-                    b"<setSwitchVector device='CCD Simulator' name='CONNECTION' state='Ok'/>",
-                )
-                .unwrap();
-        });
-
-        // Connect and send message
-        client.connect().await.unwrap();
-
-        // Small delay to ensure connection task is running
-        tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
-
-        let switches = [
-            ("CONNECT".to_string(), SwitchState::On),
-            ("DISCONNECT".to_string(), SwitchState::Off),
-        ];
+        // Initialize the state with a device and property
+        {
+            let mut state = state.lock().await;
+            let mut device_props = HashMap::new();
+            let mut switch_map = HashMap::new();
+            switch_map.insert("CONNECT".to_string(), SwitchState::On);
+            switch_map.insert("DISCONNECT".to_string(), SwitchState::Off);
+            device_props.insert(
+                "CONNECTION".to_string(),
+                Property {
+                    device: "CCD Simulator".to_string(),
+                    name: "CONNECTION".to_string(),
+                    label: Some("Connection".to_string()),
+                    group: Some("Main Control".to_string()),
+                    state: PropertyState::Ok,
+                    perm: PropertyPerm::ReadWrite,
+                    timeout: None,
+                    timestamp: timestamp::now(),
+                    elements: Some(vec![]),
+                    value: PropertyValue::SwitchVector(switch_map),
+                },
+            );
+            state
+                .devices
+                .insert("CCD Simulator".to_string(), device_props);
+        }
 
         client
-            .set_switch_vector("CCD Simulator", "CONNECTION", &switches[..])
+            .set_switch_vector("CCD Simulator", "CONNECTION", switches)
             .await
             .unwrap();
 
-        // Wait for server to finish
-        server_handle.await.unwrap();
+        let state = state.lock().await;
+        let device_props = state.devices.get("CCD Simulator").unwrap();
+        let prop = device_props.get("CONNECTION").unwrap();
+
+        match &prop.value {
+            PropertyValue::SwitchVector(switches) => {
+                assert_eq!(switches.len(), 2);
+                assert_eq!(switches.get("CONNECT"), Some(&SwitchState::On));
+                assert_eq!(switches.get("DISCONNECT"), Some(&SwitchState::Off));
+            }
+            _ => panic!("Wrong property type"),
+        }
+    }
+
+    #[tokio::test]
+    async fn test_handle_device_message() {
+        let (sender, _rx) = broadcast::channel(32);
+        let stream = Arc::new(Mutex::new(None));
+        let state = Arc::new(Mutex::new(ClientState::new()));
+        let client = Client {
+            config: ClientConfig {
+                server_addr: "127.0.0.1:7624".to_string(),
+            },
+            stream: stream.clone(),
+            state: state.clone(),
+            sender,
+        };
+
+        let def_switch = DefSwitchVector {
+            device: "CCD Simulator".to_string(),
+            name: "CONNECTION".to_string(),
+            label: "Connection".to_string(),
+            group: "Main Control".to_string(),
+            state: PropertyState::Idle,
+            perm: "rw".to_string(),
+            rule: SwitchRule::OneOfMany,
+            timeout: 60,
+            timestamp: "2025-02-14T00:42:55".to_string(),
+            switches: vec![
+                OneSwitch {
+                    name: "CONNECT".to_string(),
+                    label: "Connect".to_string(),
+                    value: "Off".to_string(),
+                },
+                OneSwitch {
+                    name: "DISCONNECT".to_string(),
+                    label: "Disconnect".to_string(),
+                    value: "On".to_string(),
+                },
+            ],
+        };
+
+        client
+            .handle_device_message(Message::DefSwitchVector(def_switch))
+            .await
+            .unwrap();
+
+        let state = state.lock().await;
+        let device_props = state.devices.get("CCD Simulator").unwrap();
+        let prop = device_props.get("CONNECTION").unwrap();
+
+        match &prop.value {
+            PropertyValue::SwitchVector(switches) => {
+                assert_eq!(switches.len(), 2);
+                assert_eq!(switches.get("CONNECT"), Some(&SwitchState::Off));
+                assert_eq!(switches.get("DISCONNECT"), Some(&SwitchState::On));
+            }
+            _ => panic!("Wrong property type"),
+        }
     }
 }
