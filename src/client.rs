@@ -6,14 +6,14 @@
 use std::collections::HashMap;
 use std::str::FromStr;
 use std::sync::Arc;
-use tokio::io::{split, AsyncBufReadExt, AsyncWriteExt, BufReader};
-use tokio::net::TcpStream as AsyncTcpStream;
-use tokio::sync::broadcast;
-use tokio::sync::Mutex;
+
+use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
+use tokio::net::TcpStream;
+use tokio::sync::{broadcast, Mutex};
 use tracing::{debug, error, info, warn};
 
 use crate::error::{Error, Result};
-use crate::message::{DefNumber, DefSwitchVector, DefText, Message, OneSwitch};
+use crate::message::{DefNumber, DefSwitch, DefSwitchVector, DefText, Message};
 use crate::property::timestamp;
 use crate::property::{
     Property, PropertyPerm, PropertyState, PropertyValue, SwitchRule, SwitchState,
@@ -31,6 +31,8 @@ pub struct ClientConfig {
 pub struct ClientState {
     /// Connected devices
     pub devices: HashMap<String, HashMap<String, Property>>,
+    /// Last message sent
+    pub last_message: Option<Message>,
 }
 
 impl ClientState {
@@ -38,6 +40,7 @@ impl ClientState {
     pub fn new() -> Self {
         Self {
             devices: HashMap::new(),
+            last_message: None,
         }
     }
 
@@ -165,26 +168,27 @@ pub struct Client {
     config: ClientConfig,
     state: Arc<Mutex<ClientState>>,
     sender: broadcast::Sender<Message>,
-    stream: Arc<Mutex<Option<AsyncTcpStream>>>,
+    stream: Arc<Mutex<Option<TcpStream>>>,
 }
 
 impl Client {
     /// Create new client
     pub async fn new(config: ClientConfig) -> Result<Self> {
-        let (sender, _receiver) = broadcast::channel(32);
+        let (sender, _) = broadcast::channel(32);
+        let stream = Arc::new(Mutex::new(None));
         let state = Arc::new(Mutex::new(ClientState::new()));
 
-        Ok(Client {
+        Ok(Self {
             config,
-            state,
             sender,
-            stream: Arc::new(Mutex::new(None)),
+            stream,
+            state,
         })
     }
 
     /// Connect to the INDI server
     pub async fn connect(&self) -> Result<()> {
-        let stream = AsyncTcpStream::connect(&self.config.server_addr).await?;
+        let stream = TcpStream::connect(&self.config.server_addr).await?;
         *self.stream.lock().await = Some(stream);
 
         // Spawn connection handler task
@@ -313,10 +317,10 @@ impl Client {
         let switches = switches
             .into_iter()
             .map(|(name, state)| {
-                let name_clone = name.clone();
-                OneSwitch {
-                    name,
-                    label: name_clone,
+                let name = name.clone();
+                DefSwitch {
+                    name: name.clone(),
+                    label: name,
                     value: if state {
                         "On".to_string()
                     } else {
@@ -456,7 +460,7 @@ impl Client {
     /// Connection handler task
     async fn connection_task(
         mut receiver: broadcast::Receiver<Message>,
-        stream: Arc<Mutex<Option<AsyncTcpStream>>>,
+        stream: Arc<Mutex<Option<TcpStream>>>,
         state: Arc<Mutex<ClientState>>,
     ) -> Result<()> {
         info!("Starting connection task...");
@@ -468,7 +472,7 @@ impl Client {
 
         let mut stream_guard = stream.lock().await;
         let stream = stream_guard.as_mut().unwrap();
-        let (reader, mut writer) = split(stream);
+        let (reader, mut writer) = tokio::io::split(stream);
         let mut reader = BufReader::new(reader);
         let mut buffer = String::new();
         let mut xml_buffer = String::new();
@@ -510,6 +514,8 @@ impl Client {
                             writer.write_all(xml.as_bytes()).await?;
                             writer.flush().await?;
                             debug!("Message sent");
+                            let mut state = state.lock().await;
+                            state.last_message = Some(message);
                         }
                         Err(broadcast::error::RecvError::Closed) => {
                             debug!("Sender dropped, closing connection");
@@ -650,8 +656,15 @@ impl Client {
         device: String,
         name: String,
         prop_state: PropertyState,
-        switches: Vec<OneSwitch>,
+        switches: Vec<DefSwitch>,
     ) -> Result<()> {
+        // Special handling for simulation switch
+        let rule = if name == "SIMULATION" {
+            SwitchRule::AtMostOne
+        } else {
+            SwitchRule::OneOfMany
+        };
+
         let def_switch = DefSwitchVector {
             device,
             name,
@@ -659,7 +672,7 @@ impl Client {
             group: String::new(),
             state: prop_state,
             perm: "rw".to_string(),
-            rule: SwitchRule::OneOfMany,
+            rule,
             timeout: 0,
             timestamp: timestamp::now(),
             switches,
@@ -674,7 +687,7 @@ impl Client {
         name: String,
         prop_state: PropertyState,
         perm: String,
-        switches: Vec<OneSwitch>,
+        switches: Vec<DefSwitch>,
     ) -> Result<()> {
         let def_switch = DefSwitchVector {
             device,
@@ -690,6 +703,20 @@ impl Client {
         };
         self.send_message(Message::DefSwitchVector(def_switch))
     }
+
+    /// Enable BLOB mode for a device
+    pub async fn enable_blob(&mut self, device: &str, mode: &str) -> Result<()> {
+        let msg = Message::EnableBlob {
+            device: device.to_string(),
+            mode: mode.to_string(),
+        };
+        // Update state before sending message
+        {
+            let mut state = self.state.lock().await;
+            state.last_message = Some(msg.clone());
+        }
+        self.send_message(msg)
+    }
 }
 
 #[cfg(test)]
@@ -700,8 +727,8 @@ mod tests {
     #[test]
     fn test_try_parse_xml_complete_message() {
         let xml = r#"<defSwitchVector device="CCD Simulator" name="CONNECTION" state="Ok" perm="rw" rule="OneOfMany">
-<oneSwitch name="CONNECT" label="Connect">On</oneSwitch>
-<oneSwitch name="DISCONNECT" label="Disconnect">Off</oneSwitch>
+<defSwitch name="CONNECT" label="Connect">On</defSwitch>
+<defSwitch name="DISCONNECT" label="Disconnect">Off</defSwitch>
 </defSwitchVector>"#;
 
         let (message, is_complete) = Client::try_parse_xml(xml);
@@ -726,7 +753,7 @@ mod tests {
     #[test]
     fn test_try_parse_xml_incomplete_message() {
         let xml = r#"<defSwitchVector device="CCD Simulator" name="CONNECTION" state="Ok" perm="rw" rule="OneOfMany">
-<oneSwitch name="CONNECT" label="Connect">On</oneSwitch>"#;
+<defSwitch name="CONNECT" label="Connect">On</defSwitch>"#;
 
         let (message, is_complete) = Client::try_parse_xml(xml);
         assert!(!is_complete);
@@ -756,8 +783,8 @@ mod tests {
     fn test_try_parse_xml_multiple_messages() {
         let xml = r#"<getProperties version="1.7" device="CCD Simulator"/>
 <defSwitchVector device="CCD Simulator" name="CONNECTION" state="Ok" perm="rw" rule="OneOfMany">
-<oneSwitch name="CONNECT" label="Connect">Off</oneSwitch>
-<oneSwitch name="DISCONNECT" label="Disconnect">On</oneSwitch>
+<defSwitch name="CONNECT" label="Connect">Off</defSwitch>
+<defSwitch name="DISCONNECT" label="Disconnect">On</defSwitch>
 </defSwitchVector>"#;
 
         // First message
@@ -831,8 +858,8 @@ mod tests {
     async fn test_parse_xml_multiple_messages() {
         let xml = r#"<getProperties version="1.7" device="CCD Simulator"/>
 <defSwitchVector device="CCD Simulator" name="CONNECTION" state="Ok" perm="rw" rule="OneOfMany">
-<oneSwitch name="CONNECT" label="Connect">Off</oneSwitch>
-<oneSwitch name="DISCONNECT" label="Disconnect">On</oneSwitch>
+<defSwitch name="CONNECT" label="Connect">Off</defSwitch>
+<defSwitch name="DISCONNECT" label="Disconnect">On</defSwitch>
 </defSwitchVector>"#;
 
         // First message
@@ -861,6 +888,12 @@ mod tests {
             assert_eq!(def_switch.device, "CCD Simulator");
             assert_eq!(def_switch.name, "CONNECTION");
             assert_eq!(def_switch.switches.len(), 2);
+            assert_eq!(def_switch.switches[0].name, "CONNECT");
+            assert_eq!(def_switch.switches[0].label, "Connect");
+            assert_eq!(def_switch.switches[0].value.trim(), "Off");
+            assert_eq!(def_switch.switches[1].name, "DISCONNECT");
+            assert_eq!(def_switch.switches[1].label, "Disconnect");
+            assert_eq!(def_switch.switches[1].value.trim(), "On");
         } else {
             panic!("Expected DefSwitchVector message");
         }
@@ -955,12 +988,12 @@ mod tests {
             timeout: 60,
             timestamp: "2025-02-14T00:42:55".to_string(),
             switches: vec![
-                OneSwitch {
+                DefSwitch {
                     name: "CONNECT".to_string(),
                     label: "Connect".to_string(),
                     value: "Off".to_string(),
                 },
-                OneSwitch {
+                DefSwitch {
                     name: "DISCONNECT".to_string(),
                     label: "Disconnect".to_string(),
                     value: "On".to_string(),
@@ -984,6 +1017,59 @@ mod tests {
                 assert_eq!(switches.get("DISCONNECT"), Some(&SwitchState::On));
             }
             _ => panic!("Wrong property type"),
+        }
+    }
+
+    #[tokio::test]
+    async fn test_enable_blob() {
+        let config = ClientConfig {
+            server_addr: "localhost:7624".to_string(),
+        };
+        let mut client = Client::new(config).await.unwrap();
+
+        // Test enabling BLOB mode for a device
+        let result = client.enable_blob("CCD Simulator", "Also").await;
+        // Since we're not actually connected, expect an error
+        assert!(result.is_err());
+
+        // But verify the message was prepared with correct format
+        {
+            let state = client.state.lock().await;
+            if let Some(last_msg) = state.last_message.as_ref() {
+                match last_msg {
+                    Message::EnableBlob { device, mode } => {
+                        assert_eq!(device, "CCD Simulator");
+                        assert_eq!(mode, "Also");
+                    }
+                    _ => panic!("Wrong message type sent"),
+                }
+            } else {
+                panic!("No message was sent");
+            }
+        }
+
+        // Test with different BLOB modes
+        let modes = ["Never", "Also", "Only"];
+        for mode in modes {
+            let result = client.enable_blob("CCD Simulator", mode).await;
+            // Since we're not actually connected, expect an error
+            assert!(result.is_err());
+
+            let state = client.state.lock().await;
+            if let Some(last_msg) = state.last_message.as_ref() {
+                match last_msg {
+                    Message::EnableBlob {
+                        device: _,
+                        mode: sent_mode,
+                    } => {
+                        assert_eq!(sent_mode, mode);
+                    }
+                    _ => panic!("Wrong message type sent"),
+                }
+            } else {
+                panic!("No message was sent");
+            }
+            drop(state); // Explicitly drop the state lock
         }
     }
 }

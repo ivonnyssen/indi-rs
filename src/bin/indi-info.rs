@@ -1,265 +1,276 @@
 use clap::Parser;
-use colored::{ColoredString, Colorize};
-use indi_rs::client::{Client, ClientConfig};
-use indi_rs::error::Result;
-use indi_rs::property::{PropertyState, PropertyValue};
-use std::collections::HashMap;
+use colored::Colorize;
+use indi_rs::{
+    client::{Client, ClientConfig},
+    error::Result,
+    message::DefNumber,
+    property::{PropertyState, PropertyValue},
+};
 use std::time::Duration;
 use tracing::{debug, info, warn};
 
-#[derive(Parser)]
-#[command(version, about, long_about = None)]
+/// Command line arguments
+#[derive(Parser, Debug)]
+#[command(author, version, about, long_about = None)]
 struct Args {
-    /// Server address
-    #[arg(short, long, default_value = "localhost:7624")]
-    addr: String,
-
-    /// Enable verbose (debug) logging
+    /// Device to connect to
     #[arg(short, long)]
-    verbose: bool,
+    device: Option<String>,
+
+    /// Exposure time in seconds
+    #[arg(short, long)]
+    exposure: Option<f64>,
+
+    /// Server address
+    #[arg(short, long, default_value = "127.0.0.1:7624")]
+    addr: String,
 }
 
-fn format_property_state(state: &PropertyState) -> ColoredString {
-    match state {
-        PropertyState::Idle => "Idle".yellow(),
-        PropertyState::Ok => "Ok".green(),
-        PropertyState::Busy => "Busy".blue(),
-        PropertyState::Alert => "Alert".red(),
-    }
-}
-
-/// Check if a device is a camera by looking for typical camera properties
-async fn is_camera(client: &Client, device: &str) -> bool {
-    debug!("Checking if {} is a camera device", device);
-
-    // Wait for all properties to be exposed
-    for i in 0..10 {
-        debug!("Attempt {} to get properties for {}", i + 1, device);
-        tokio::time::sleep(tokio::time::Duration::from_millis(1000)).await;
-
-        if let Some(properties) = client.get_device_properties(device).await {
-            debug!("Found {} properties for {}", properties.len(), device);
-
-            // Print all properties for debugging
-            for (key, prop) in properties.iter() {
-                debug!("Property: {} = {:?}", key, prop);
-            }
-
-            // Look for common camera properties or check device name
-            if device.to_uppercase().contains("CCD") || device.to_uppercase().contains("CAMERA") {
-                debug!("Device name indicates it's a camera");
-                return true;
-            }
-
-            // Check for any property that might indicate it's a camera
-            for prop_name in properties.keys() {
-                let prop_upper = prop_name.to_uppercase();
-                if prop_upper.contains("CCD")
-                    || prop_upper.contains("CAMERA")
-                    || prop_upper.contains("GUIDER")
-                    || prop_upper.contains("FOCUS")
-                    || prop_upper.contains("EXPOSURE")
-                    || prop_upper.contains("FRAME")
-                    || prop_upper.contains("CAPTURE")
-                {
-                    debug!("Found camera property: {}", prop_name);
-                    return true;
-                }
-            }
-        } else {
-            debug!("No properties found for {} on attempt {}", device, i + 1);
-        }
-    }
-
-    debug!("No camera properties found for {}", device);
-    false
-}
-
-/// Disable simulation mode for a device
-async fn disable_simulation(client: &mut Client, device: &str) -> Result<bool> {
-    info!("Disabling simulation mode for: {}", device);
-
-    // Set SIMULATION to Off
-    let mut switches = HashMap::new();
-    switches.insert("ENABLE".to_string(), false);
-    switches.insert("DISABLE".to_string(), true);
-
-    client
-        .set_switch_vector(device, "SIMULATION", switches)
-        .await?;
-
-    Ok(true)
-}
-
-/// Enable simulation mode for a device
-#[allow(dead_code)]
-async fn enable_simulation(client: &mut Client, device: &str) -> Result<()> {
-    info!("Enabling simulation mode for: {}", device);
-
-    // Set SIMULATION to On
-    let mut switches = HashMap::new();
-    switches.insert("ENABLE".to_string(), true);
-    switches.insert("DISABLE".to_string(), false);
-
-    client
-        .set_switch_vector(device, "SIMULATION", switches)
-        .await?;
-
-    Ok(())
-}
-
-/// Connect to a camera device
+/// Connect to a camera device and take an image
 async fn connect_camera(client: &mut Client, device: &str) -> Result<bool> {
     info!("Attempting to connect to camera: {}", device);
 
-    // Wait for properties to be defined
-    debug!("Waiting for properties to be defined");
-    let mut retries = 0;
-    let properties = loop {
-        // Request CONNECTION property explicitly
-        if retries % 5 == 0 {
-            debug!("Requesting CONNECTION property for device {}", device);
-            client
-                .get_properties(Some(device), Some("CONNECTION"))
-                .await?;
-        }
+    // First get device properties
+    debug!("Getting properties for {}", device);
+    client.get_properties(Some(device), None).await?;
 
+    // Wait for device to be ready
+    debug!("Waiting for device to be ready");
+    let mut retries = 0;
+    while retries < 30 {
         if let Some(props) = client.get_device_properties(device).await {
-            debug!("Found properties for {}: {:?}", device, props.keys());
+            debug!("Current properties: {:?}", props.keys().collect::<Vec<_>>());
             if props.contains_key("CONNECTION") {
-                break props;
+                debug!("Device is ready");
+                break;
             }
         }
-        if retries > 30 {
-            warn!("Timeout waiting for CONNECTION property from {}", device);
+        if retries >= 30 {
+            warn!("Timeout waiting for device properties");
             return Ok(false);
         }
         tokio::time::sleep(Duration::from_millis(500)).await;
         retries += 1;
-    };
 
-    // Check if already connected
-    if let Some(conn) = properties.get("CONNECTION") {
-        debug!("Found CONNECTION property: {:?}", conn);
+        // Re-request properties every few retries
+        if retries % 5 == 0 {
+            debug!("Re-requesting properties for {}", device);
+            client.get_properties(Some(device), None).await?;
+        }
+    }
 
-        // Try to connect
-        debug!("Attempting to connect to {}", device);
-        let mut switches = HashMap::new();
-        switches.insert("CONNECT".to_string(), true);
-        switches.insert("DISCONNECT".to_string(), false);
+    // Enable BLOB mode before connecting
+    debug!("Enabling BLOB mode for {}", device);
+    client.enable_blob(device, "Also").await?;
 
-        client
-            .set_switch_vector(device, "CONNECTION", switches)
-            .await?;
+    // Connect to the device
+    debug!("Connecting to device");
+    let mut switches = std::collections::HashMap::new();
+    switches.insert("CONNECT".to_string(), true);
+    switches.insert("DISCONNECT".to_string(), false);
+    client
+        .set_switch_vector(device, "CONNECTION", switches)
+        .await?;
 
-        // Wait for the connection to be established
-        debug!("Waiting for connection to be established");
-        let mut retries = 0;
-        loop {
-            if let Some(props) = client.get_device_properties(device).await {
-                if let Some(conn) = props.get("CONNECTION") {
-                    debug!("Connection state: {:?}", conn);
-                    if let PropertyValue::Switch(state) = &conn.value {
-                        if bool::from(*state) {
+    // Wait for connection to complete
+    debug!("Waiting for connection to complete");
+    retries = 0;
+    while retries < 30 {
+        if let Some(props) = client.get_device_properties(device).await {
+            if let Some(connection) = props.get("CONNECTION") {
+                debug!("Connection state: {:?}", connection);
+                match &connection.value {
+                    PropertyValue::Switch(state) => {
+                        if (*state).into() {
                             info!("Successfully connected to {}", device);
                             return Ok(true);
                         }
                     }
+                    _ => warn!("Unexpected property type for CONNECTION"),
                 }
             }
-            if retries > 10 {
-                warn!("Timeout waiting for {} to connect", device);
-                return Ok(false);
-            }
-            tokio::time::sleep(Duration::from_millis(500)).await;
-            retries += 1;
         }
-    } else {
-        warn!("Device {} does not have a CONNECTION property", device);
-        Ok(false)
+        tokio::time::sleep(Duration::from_millis(500)).await;
+        retries += 1;
+
+        // Re-request properties every few retries
+        if retries % 5 == 0 {
+            debug!("Re-requesting properties for {}", device);
+            client.get_properties(Some(device), None).await?;
+        }
     }
+
+    warn!("Failed to connect to device");
+    Ok(false)
 }
 
+/// Take an image with the camera
+async fn take_image(client: &mut Client, device: &str, exposure: f64) -> Result<bool> {
+    info!("Taking image with {} second exposure", exposure);
+
+    // Set exposure time
+    debug!("Setting exposure time to {} seconds", exposure);
+    let numbers = vec![DefNumber {
+        name: "CCD_EXPOSURE_VALUE".to_string(),
+        value: exposure.to_string(),
+        format: "%.6f".to_string(),
+        min: "0.0".to_string(),
+        max: "3600.0".to_string(),
+        step: "0.000001".to_string(),
+        label: "Duration (s)".to_string(),
+    }];
+    client.set_number_vector(
+        device,
+        "CCD_EXPOSURE",
+        numbers,
+        &PropertyState::Busy,
+        "Taking exposure",
+    )?;
+
+    // Wait for exposure to complete and image to be ready
+    debug!("Waiting for exposure to complete");
+    let mut retries = 0;
+    while retries < (exposure * 2.0 + 30.0) as i32 {
+        if let Some(props) = client.get_device_properties(device).await {
+            if let Some(exposure_prop) = props.get("CCD_EXPOSURE") {
+                match &exposure_prop.value {
+                    PropertyValue::Number(value, _) => {
+                        if *value <= 0.0 {
+                            debug!("Exposure complete");
+                            break;
+                        } else {
+                            debug!("Exposure remaining: {:.1} seconds", value);
+                        }
+                    }
+                    _ => warn!("Unexpected property type for CCD_EXPOSURE"),
+                }
+            }
+        }
+        tokio::time::sleep(Duration::from_millis(500)).await;
+        retries += 1;
+    }
+
+    // Wait for BLOB data
+    debug!("Waiting for image data");
+    retries = 0;
+    while retries < 30 {
+        if let Some(props) = client.get_device_properties(device).await {
+            if let Some(blob_prop) = props.get("CCD1") {
+                match &blob_prop.value {
+                    PropertyValue::Blob { data, .. } => {
+                        if !data.is_empty() {
+                            info!("Image data received ({} bytes)", data.len());
+                            // TODO: Save image data to file
+                            return Ok(true);
+                        }
+                    }
+                    _ => warn!("Unexpected property type for CCD1"),
+                }
+            }
+        }
+        tokio::time::sleep(Duration::from_millis(500)).await;
+        retries += 1;
+    }
+
+    warn!("Failed to receive image data");
+    Ok(false)
+}
+
+/// Initialize the INDI client with logging configuration
+async fn initialize_client(addr: &str) -> Result<Client> {
+    tracing_subscriber::fmt()
+        .with_max_level(tracing::Level::DEBUG)
+        .with_target(true)
+        .with_thread_ids(true)
+        .with_file(true)
+        .with_line_number(true)
+        .with_ansi(true)
+        .with_level(true)
+        .with_thread_names(true)
+        .init();
+
+    info!("Initializing INDI client");
+    let config = ClientConfig {
+        server_addr: addr.to_string(),
+    };
+    let mut client = Client::new(config).await?;
+    client.connect().await?;
+    client.get_properties(None, None).await?;
+
+    Ok(client)
+}
+
+/// Find all available cameras from the device list
+async fn find_cameras(client: &mut Client) -> Result<Vec<String>> {
+    let mut cameras = Vec::new();
+    debug!("Searching for cameras...");
+    let devices = client.get_devices().await?;
+    debug!("Found devices: {:?}", devices);
+
+    for device in devices {
+        if let Some(props) = client.get_device_properties(&device).await {
+            debug!(
+                "Properties for {}: {:?}",
+                device,
+                props.keys().collect::<Vec<_>>()
+            );
+            // Check if this is a camera (has CCD_EXPOSURE property)
+            if props.contains_key("CCD_EXPOSURE") {
+                info!("Found camera: {}", device);
+                cameras.push(device);
+            }
+        }
+    }
+    Ok(cameras)
+}
+
+/// Process a single camera - connect and optionally take an image
+async fn process_camera(client: &mut Client, camera: &str, exposure: Option<f64>) -> Result<()> {
+    println!("Camera: {}", camera);
+    let success = connect_camera(client, camera).await?;
+    println!(
+        "  Connection - {}",
+        if success {
+            "Success".green()
+        } else {
+            "Failed".red()
+        }
+    );
+
+    // Take an image if exposure time is provided
+    if success && exposure.is_some() {
+        let success = take_image(client, camera, exposure.unwrap()).await?;
+        println!(
+            "  Image capture - {}",
+            if success {
+                "Success".green()
+            } else {
+                "Failed".red()
+            }
+        );
+    }
+    Ok(())
+}
+
+/// Main entry point
 #[tokio::main]
 async fn main() -> Result<()> {
     let args = Args::parse();
+    let mut client = initialize_client(&args.addr).await?;
 
-    // Initialize logging
-    tracing_subscriber::fmt()
-        .with_max_level(if args.verbose {
-            tracing::Level::DEBUG
-        } else {
-            tracing::Level::INFO
-        })
-        .init();
-
-    // Create client
-    let config = ClientConfig {
-        server_addr: args.addr,
-    };
-
-    let mut client = Client::new(config).await?;
-    client.connect().await?;
-
-    // Get devices
-    info!("Sending initial GetProperties message");
-    client.get_properties(None, None).await?;
-
-    // Wait longer for devices to be discovered
-    info!("Waiting for devices to be discovered...");
-    tokio::time::sleep(Duration::from_secs(5)).await;
-
-    // Get list of devices
-    let devices = client.get_devices().await?;
-    debug!("Found {} devices", devices.len());
-    for device in &devices {
-        debug!("Device: {}", device);
-    }
-
-    let mut cameras = Vec::new();
-
-    // Print device info and check for cameras
-    for device in devices {
-        if let Some(properties) = client.get_device_properties(&device).await {
-            println!("\nDevice: {}", device);
-            for (name, prop) in properties.iter() {
-                println!("  {} [{}]", name, format_property_state(&prop.state));
-            }
-        }
-
-        // Check if it's a camera
-        if is_camera(&client, &device).await {
-            info!("Found camera device: {}", device);
-            cameras.push(device);
-        }
-    }
-
-    if cameras.is_empty() {
-        println!("\nNo cameras found");
+    // Handle single device mode vs discover mode
+    if let Some(device) = args.device.as_ref() {
+        process_camera(&mut client, device, args.exposure).await?;
     } else {
-        println!("\nFound {} cameras:", cameras.len());
-        for camera in &cameras {
-            println!("  {}", camera);
+        let cameras = find_cameras(&mut client).await?;
+        if cameras.is_empty() {
+            println!("{}", "No cameras found".red());
+            return Ok(());
         }
 
-        // Try to connect to each camera
-        println!("\nAttempting to connect to cameras:");
-        for camera in &cameras {
-            // First disable simulation mode
-            match disable_simulation(&mut client, camera).await {
-                Ok(_) => debug!("Disabled simulation mode for {}", camera),
-                Err(e) => warn!("Failed to disable simulation mode for {}: {}", camera, e),
-            }
-
-            // Wait a bit for the simulation mode to take effect
-            tokio::time::sleep(Duration::from_millis(1000)).await;
-
-            // Now try to connect
-            match connect_camera(&mut client, camera).await {
-                Ok(true) => println!("  {} - Connected", camera),
-                Ok(false) => println!("  {} - Failed to connect", camera),
-                Err(e) => println!("  {} - Error: {}", camera, e),
-            }
+        // Process all discovered cameras
+        for camera in cameras {
+            process_camera(&mut client, &camera, args.exposure).await?;
         }
     }
 

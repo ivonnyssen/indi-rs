@@ -127,21 +127,32 @@ pub enum Message {
         #[serde(rename = "@state")]
         state: PropertyState,
         /// Switch elements
-        #[serde(rename = "oneSwitch")]
-        switches: Vec<OneSwitch>,
+        #[serde(rename = "defSwitch")]
+        switches: Vec<DefSwitch>,
+    },
+    /// Enable blob message
+    #[serde(rename = "enableBLOB")]
+    EnableBlob {
+        /// Device name
+        #[serde(rename = "@device")]
+        device: String,
+        /// Mode
+        #[serde(rename = "$value")]
+        mode: String,
     },
 }
 
 /// Switch element in a switch vector
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct OneSwitch {
-    /// Name of the switch
+#[serde(rename = "defSwitch")]
+pub struct DefSwitch {
+    /// Switch name
     #[serde(rename = "@name")]
     pub name: String,
-    /// Label for the switch
+    /// Switch label
     #[serde(rename = "@label")]
     pub label: String,
-    /// Value of the switch (On/Off)
+    /// Switch value
     #[serde(rename = "$text")]
     pub value: String,
 }
@@ -156,7 +167,7 @@ pub struct DefText {
     #[serde(rename = "@label")]
     pub label: String,
     /// Text value
-    #[serde(rename = "$value")]
+    #[serde(rename = "$text")]
     pub value: String,
 }
 
@@ -182,7 +193,7 @@ pub struct DefNumber {
     #[serde(rename = "@step")]
     pub step: String,
     /// Number value
-    #[serde(rename = "$value")]
+    #[serde(rename = "$text")]
     pub value: String,
 }
 
@@ -224,8 +235,8 @@ pub struct DefSwitchVector {
     #[serde(default)]
     pub timestamp: String,
     /// Switch elements
-    #[serde(rename = "oneSwitch")]
-    pub switches: Vec<OneSwitch>,
+    #[serde(rename = "defSwitch")]
+    pub switches: Vec<DefSwitch>,
 }
 
 impl DefSwitchVector {
@@ -321,8 +332,8 @@ mod tests {
     #[test]
     fn test_parse_def_switch_vector() {
         let xml = r#"<defSwitchVector device="Telescope Simulator" name="CONNECTION" label="Connection" group="Main Control" state="Idle" perm="rw" rule="OneOfMany" timeout="60" timestamp="2025-02-14T00:42:55">
-<oneSwitch name="CONNECT" label="Connect">Off</oneSwitch>
-<oneSwitch name="DISCONNECT" label="Disconnect">On</oneSwitch>
+<defSwitch name="CONNECT" label="Connect">Off</defSwitch>
+<defSwitch name="DISCONNECT" label="Disconnect">On</defSwitch>
 </defSwitchVector>"#;
         let parsed = Message::from_str(xml).unwrap();
         match parsed {
@@ -345,6 +356,50 @@ mod tests {
                 assert_eq!(def_switch.switches[1].value.trim(), "On");
             }
             _ => panic!("Expected DefSwitchVector"),
+        }
+    }
+
+    #[test]
+    fn test_enable_blob_message() {
+        // Test creating and serializing EnableBlob message
+        let msg = Message::EnableBlob {
+            device: "CCD Simulator".to_string(),
+            mode: "Also".to_string(),
+        };
+        let xml = msg.to_xml().unwrap();
+        println!("Generated XML:\n{}", xml);
+        assert!(xml.contains("enableBLOB"));
+        assert!(xml.contains("device=\"CCD Simulator\""));
+        assert!(xml.contains(">Also<"));
+
+        // Test parsing the XML back
+        let parsed = Message::from_str(&xml).unwrap();
+        match parsed {
+            Message::EnableBlob { device, mode } => {
+                assert_eq!(device, "CCD Simulator");
+                assert_eq!(mode, "Also");
+            }
+            _ => panic!("Wrong message type"),
+        }
+
+        // Test with different BLOB modes
+        let modes = ["Never", "Also", "Only"];
+        for mode in modes {
+            let msg = Message::EnableBlob {
+                device: "CCD Simulator".to_string(),
+                mode: mode.to_string(),
+            };
+            let xml = msg.to_xml().unwrap();
+            let parsed = Message::from_str(&xml).unwrap();
+            match parsed {
+                Message::EnableBlob {
+                    device: _,
+                    mode: parsed_mode,
+                } => {
+                    assert_eq!(parsed_mode, mode);
+                }
+                _ => panic!("Wrong message type"),
+            }
         }
     }
 }
