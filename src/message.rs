@@ -3,7 +3,7 @@ use serde::{Deserialize, Serialize};
 use std::str::FromStr;
 
 use crate::error::{Error, Result};
-use crate::property::{Property, PropertyState, SwitchRule};
+use crate::property::{Property, PropertyState, SwitchRule, SwitchState};
 
 /// INDI message
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -127,8 +127,8 @@ pub enum Message {
         #[serde(rename = "@state")]
         state: PropertyState,
         /// Switch elements
-        #[serde(rename = "defSwitch")]
-        switches: Vec<DefSwitch>,
+        #[serde(rename = "oneSwitch")]
+        switches: Vec<OneSwitch>,
     },
     /// Enable blob message
     #[serde(rename = "enableBLOB")]
@@ -142,6 +142,18 @@ pub enum Message {
     },
 }
 
+/// Switch element in a new switch vector
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename = "oneSwitch")]
+pub struct OneSwitch {
+    /// Switch name
+    #[serde(rename = "@name")]
+    pub name: String,
+    /// Switch state
+    #[serde(rename = "$text")]
+    pub state: SwitchState,
+}
+
 /// Switch element in a switch vector
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename = "defSwitch")]
@@ -152,9 +164,9 @@ pub struct DefSwitch {
     /// Switch label
     #[serde(rename = "@label")]
     pub label: String,
-    /// Switch value
+    /// Switch state
     #[serde(rename = "$text")]
-    pub value: String,
+    pub state: SwitchState,
 }
 
 /// Text element in a text vector
@@ -242,7 +254,7 @@ pub struct DefSwitchVector {
 impl DefSwitchVector {
     /// Validates the switch vector according to its rule
     pub fn validate(&self) -> Result<()> {
-        let on_count = self.switches.iter().filter(|s| s.value == "On").count();
+        let on_count = self.switches.iter().filter(|s| s.state == SwitchState::On).count();
 
         match self.rule {
             SwitchRule::OneOfMany if on_count != 1 => Err(Error::Property(format!(
@@ -275,8 +287,7 @@ impl Message {
     /// Convert message to XML
     pub fn to_xml(&self) -> Result<String> {
         let mut writer = String::new();
-        let mut ser = Serializer::new(&mut writer);
-        ser.indent(' ', 4);
+        let ser = Serializer::new(&mut writer);
         self.serialize(ser)
             .map_err(|e| Error::SerializationError(e.to_string()))?;
         Ok(writer)
@@ -299,6 +310,7 @@ impl FromStr for Message {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use quick_xml::de::from_str;
 
     #[test]
     fn test_parse_message() {
@@ -335,6 +347,7 @@ mod tests {
 <defSwitch name="CONNECT" label="Connect">Off</defSwitch>
 <defSwitch name="DISCONNECT" label="Disconnect">On</defSwitch>
 </defSwitchVector>"#;
+
         let parsed = Message::from_str(xml).unwrap();
         match parsed {
             Message::DefSwitchVector(def_switch) => {
@@ -350,13 +363,59 @@ mod tests {
                 assert_eq!(def_switch.switches.len(), 2);
                 assert_eq!(def_switch.switches[0].name, "CONNECT");
                 assert_eq!(def_switch.switches[0].label, "Connect");
-                assert_eq!(def_switch.switches[0].value.trim(), "Off");
+                assert_eq!(def_switch.switches[0].state, SwitchState::Off);
                 assert_eq!(def_switch.switches[1].name, "DISCONNECT");
                 assert_eq!(def_switch.switches[1].label, "Disconnect");
-                assert_eq!(def_switch.switches[1].value.trim(), "On");
+                assert_eq!(def_switch.switches[1].state, SwitchState::On);
             }
             _ => panic!("Expected DefSwitchVector"),
         }
+    }
+
+    #[test]
+    fn test_parse_new_switch_vector() {
+        let xml = r#"<newSwitchVector device="Test Device" name="CONNECTION" state="Ok">
+<oneSwitch name="CONNECT">On</oneSwitch>
+<oneSwitch name="DISCONNECT">Off</oneSwitch>
+</newSwitchVector>"#;
+
+        let msg: Message = from_str(xml).unwrap();
+        match msg {
+            Message::NewSwitchVector { device, name, state, switches } => {
+                assert_eq!(device, "Test Device");
+                assert_eq!(name, "CONNECTION");
+                assert_eq!(state, PropertyState::Ok);
+                assert_eq!(switches.len(), 2);
+                
+                assert_eq!(switches[0].name, "CONNECT");
+                assert_eq!(switches[0].state, SwitchState::On);
+                
+                assert_eq!(switches[1].name, "DISCONNECT");
+                assert_eq!(switches[1].state, SwitchState::Off);
+            }
+            _ => panic!("Expected NewSwitchVector"),
+        }
+
+        // Test serialization
+        let msg = Message::NewSwitchVector {
+            device: "Test Device".to_string(),
+            name: "CONNECTION".to_string(),
+            state: PropertyState::Ok,
+            switches: vec![
+                OneSwitch {
+                    name: "CONNECT".to_string(),
+                    state: SwitchState::On,
+                },
+                OneSwitch {
+                    name: "DISCONNECT".to_string(),
+                    state: SwitchState::Off,
+                },
+            ],
+        };
+
+        let xml = msg.to_xml().unwrap();
+        let expected = "<newSwitchVector device=\"Test Device\" name=\"CONNECTION\" state=\"Ok\"><oneSwitch name=\"CONNECT\">On</oneSwitch><oneSwitch name=\"DISCONNECT\">Off</oneSwitch></newSwitchVector>";
+        assert_eq!(xml.trim(), expected.trim());
     }
 
     #[test]

@@ -74,11 +74,7 @@ impl ClientState {
                             .map(|s| {
                                 (
                                     s.name.clone(),
-                                    if s.value.trim() == "On" {
-                                        SwitchState::On
-                                    } else {
-                                        SwitchState::Off
-                                    },
+                                    s.state,
                                 )
                             })
                             .collect::<HashMap<_, _>>(),
@@ -312,21 +308,14 @@ impl Client {
         &self,
         device: &str,
         name: &str,
-        switches: HashMap<String, bool>,
+        switches: HashMap<String, SwitchState>,
     ) -> Result<()> {
         let switches = switches
             .into_iter()
-            .map(|(name, state)| {
-                let name = name.clone();
-                DefSwitch {
-                    name: name.clone(),
-                    label: name,
-                    value: if state {
-                        "On".to_string()
-                    } else {
-                        "Off".to_string()
-                    },
-                }
+            .map(|(name, state)| DefSwitch {
+                name: name.clone(),
+                label: name,
+                state,
             })
             .collect();
 
@@ -552,10 +541,10 @@ impl Client {
         device: &str,
         name: &str,
         switch_name: &str,
-        state: bool,
+        state: SwitchState,
     ) -> Result<()> {
         let mut switches = HashMap::new();
-        switches.insert(switch_name.to_string(), SwitchState::from(state));
+        switches.insert(switch_name.to_string(), state);
 
         let prop = Property::new(
             device.to_string(),
@@ -632,7 +621,7 @@ impl Client {
                 let switches: HashMap<String, SwitchState> = def_switch
                     .switches
                     .into_iter()
-                    .map(|s| (s.name, s.value.parse().unwrap_or(SwitchState::Off)))
+                    .map(|s| (s.name, s.state))
                     .collect();
 
                 let prop = Property::new(
@@ -741,10 +730,10 @@ mod tests {
             assert_eq!(def_switch.switches.len(), 2);
             assert_eq!(def_switch.switches[0].name, "CONNECT");
             assert_eq!(def_switch.switches[0].label, "Connect");
-            assert_eq!(def_switch.switches[0].value.trim(), "On");
+            assert_eq!(def_switch.switches[0].state, SwitchState::On);
             assert_eq!(def_switch.switches[1].name, "DISCONNECT");
             assert_eq!(def_switch.switches[1].label, "Disconnect");
-            assert_eq!(def_switch.switches[1].value.trim(), "Off");
+            assert_eq!(def_switch.switches[1].state, SwitchState::Off);
         } else {
             panic!("Expected DefSwitchVector message");
         }
@@ -815,10 +804,10 @@ mod tests {
             assert_eq!(def_switch.switches.len(), 2);
             assert_eq!(def_switch.switches[0].name, "CONNECT");
             assert_eq!(def_switch.switches[0].label, "Connect");
-            assert_eq!(def_switch.switches[0].value.trim(), "Off");
+            assert_eq!(def_switch.switches[0].state, SwitchState::Off);
             assert_eq!(def_switch.switches[1].name, "DISCONNECT");
             assert_eq!(def_switch.switches[1].label, "Disconnect");
-            assert_eq!(def_switch.switches[1].value.trim(), "On");
+            assert_eq!(def_switch.switches[1].state, SwitchState::On);
         } else {
             panic!("Expected DefSwitchVector message");
         }
@@ -890,10 +879,10 @@ mod tests {
             assert_eq!(def_switch.switches.len(), 2);
             assert_eq!(def_switch.switches[0].name, "CONNECT");
             assert_eq!(def_switch.switches[0].label, "Connect");
-            assert_eq!(def_switch.switches[0].value.trim(), "Off");
+            assert_eq!(def_switch.switches[0].state, SwitchState::Off);
             assert_eq!(def_switch.switches[1].name, "DISCONNECT");
             assert_eq!(def_switch.switches[1].label, "Disconnect");
-            assert_eq!(def_switch.switches[1].value.trim(), "On");
+            assert_eq!(def_switch.switches[1].state, SwitchState::On);
         } else {
             panic!("Expected DefSwitchVector message");
         }
@@ -914,8 +903,8 @@ mod tests {
         };
 
         let mut switches = HashMap::new();
-        switches.insert("CONNECT".to_string(), true);
-        switches.insert("DISCONNECT".to_string(), false);
+        switches.insert("CONNECT".to_string(), SwitchState::On);
+        switches.insert("DISCONNECT".to_string(), SwitchState::Off);
 
         // Initialize the state with a device and property
         {
@@ -991,12 +980,12 @@ mod tests {
                 DefSwitch {
                     name: "CONNECT".to_string(),
                     label: "Connect".to_string(),
-                    value: "Off".to_string(),
+                    state: SwitchState::Off,
                 },
                 DefSwitch {
                     name: "DISCONNECT".to_string(),
                     label: "Disconnect".to_string(),
-                    value: "On".to_string(),
+                    state: SwitchState::On,
                 },
             ],
         };
