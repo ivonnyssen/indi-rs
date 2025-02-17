@@ -1,3 +1,4 @@
-- check if we have all structures defined by the inid protocol correctly modeled
+- complete all structures and messages
+- refactor message.rs to be more readbale, perhaps smaller sub modules
 - add tests for serialziation/deserialization of all messages
 - capture network traffic of the camera connection with ecos and use that for integration testing

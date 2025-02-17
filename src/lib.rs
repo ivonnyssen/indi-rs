@@ -22,7 +22,7 @@ pub mod server;
 pub mod prelude {
     pub use crate::client::{Client, ClientConfig};
     pub use crate::error::Error;
-    pub use crate::message::Message;
+    pub use crate::message::MessageType;
     pub use crate::property::{Property, PropertyPerm, PropertyState};
     pub use crate::server::{Server, ServerConfig};
 }
