@@ -1,0 +1,2 @@
+- complete all structures and messages
+- refactor message.rs to be more readbale, perhaps smaller sub modules

@@ -1,0 +1,592 @@
+..3...3.<getProperties version="1.7"/>
+19:23:58.260107 IP localhost.7624 > localhost.46228: Flags [.], ack 31, win 512, options [nop,nop,TS val 3448255392 ecr 3448255392], length 0
+..3...3.<defSwitchVector device="QHY CCD QHY5III290C-1ca" name="CONNECTION" label="Connection" group="Main Control" state="Idle" perm="rw" rule="OneOfMany" timeout="60" timestamp="2025-02-16T03:23:58">
+    <defSwitch name="CONNECT" label="Connect">
+Off
+    </defSwitch>
+    <defSwitch name="DISCONNECT" label="Disconnect">
+On
+    </defSwitch>
+</defSwitchVector>
+
+..3...3.<defTextVector device="QHY CCD QHY5III290C-1ca" name="DRIVER_INFO" label="Driver Info" group="General Info" state="Idle" perm="ro" timeout="60" timestamp="2025-02-16T03:23:58">
+    <defText name="DRIVER_NAME" label="Name">
+QHY CCD
+    </defText>
+    <defText name="DRIVER_EXEC" label="Exec">
+indi_qhy_ccd
+    </defText>
+    <defText name="DRIVER_VERSION" label="Version">
+2.8
+    </defText>
+    <defText name="DRIVER_INTERFACE" label="Interface">
+6
+    </defText>
+</defTextVector>
+
+..3...3.<defNumberVector device="QHY CCD QHY5III290C-1ca" name="POLLING_PERIOD" label="Polling" group="Options" state="Idle" perm="rw" timeout="0" timestamp="2025-02-16T03:23:58">
+    <defNumber name="PERIOD_MS" label="Period (ms)" format="%.f" min="10" max="600000" step="1000">
+1000
+    </defNumber>
+</defNumberVector>
+<defSwitchVector device="QHY CCD QHY5III290C-1ca" name="DEBUG" label="Debug" group="Options" state="Idle" perm="rw" rule="OneOfMany" timeout="0" timestamp="2025-02-16T03:23:58">
+    <defSwitch name="ENABLE" label="Enable">
+Off
+    </defSwitch>
+    <defSwitch name="DISABLE" label="Disable">
+On
+    </defSwitch>
+</defSwitchVector>
+<defSwitchVector device="QHY CCD QHY5III290C-1ca" name="SIMULATION" label="Simulation" group="Options" state="Idle" perm="rw" rule="OneOfMany" timeout="0" timestamp="2025-02-16T03:23:58">
+    <defSwitch name="ENABLE" label="Enable">
+Off
+    </defSwitch>
+    <defSwitch name="DISABLE" label="Disable">
+On
+    </defSwitch>
+</defSwitchVector>
+<defSwitchVector device="QHY CCD QHY5III290C-1ca" name="CONFIG_PROCESS" label="Configuration" group="Options" state="Alert" perm="rw" rule="AtMostOne" timeout="0" timestamp="2025-02-16T03:23:58">
+    <defSwitch name="CONFIG_LOAD" label="Load">
+Off
+    </defSwitch>
+    <defSwitch name="CONFIG_SAVE" label="Save">
+Off
+    </defSwitch>
+    <defSwitch name="CONFIG_DEFAULT" label="Default">
+Off
+    </defSwitch>
+    <defSwitch name="CONFIG_PURGE" label="Purge">
+Off
+    </defSwitch>
+</defSwitchVector>
+<defTextVector device="QHY CCD QHY5III290C-1ca" name="ACTIVE_DEVICES" label="Snoop devices" group="Options" state="Ok" perm="rw" timeout="60" timestamp="2025-02-16T03:23:58">
+    <defText name="ACTIVE_TELESCOPE" label="Telescope"/>
+    <defText name="ACTIVE_ROTATOR" label="Rotator"/>
+    <defText name="ACTIVE_FOCUSER" label="Focuser"/>
+    <defText name="ACTIVE_FILTER" label="Filter"/>
+    <defText name="ACTIVE_SKYQUALITY" label="Sky Quality">
+SQM
+    </defText>
+</defTextVector>
+<defTextVector device="QHY CCD QHY5III290C-1ca" name="ACTIVE_DEVICES" label="Snoop devices" group="Options" state="Ok" perm="rw" timeout="60" timestamp="2025-02-16T03:23:58">
+    <defText name="ACTIVE_TELESCOPE" label="Telescope"/>
+    <defText name="ACTIVE_ROTATOR" label="Rotator"/>
+    <defText name="ACTIVE_FOCUSER" label="Focuser"/>
+    <defText name="ACTIVE_FILTER" label="Filter"/>
+    <defText name="ACTIVE_SKYQUALITY" label="Sky Quality">
+SQM
+    </defText>
+</defTextVector>
+
+..5...3.<getProperties version="1.7" device="QHY CCD QHY5III290C-1ca"/>
+19:23:58.761851 IP localhost.7624 > localhost.46228: Flags [P.], seq 3286:3640, ack 94, win 512, options [nop,nop,TS val 3448255893 ecr 3448255893], length 354
+..5...5.<defSwitchVector device="QHY CCD QHY5III290C-1ca" name="CONNECTION" label="Connection" group="Main Control" state="Idle" perm="rw" rule="OneOfMany" timeout="60" timestamp="2025-02-16T03:23:58">
+    <defSwitch name="CONNECT" label="Connect">
+Off
+    </defSwitch>
+    <defSwitch name="DISCONNECT" label="Disconnect">
+On
+    </defSwitch>
+</defSwitchVector>
+
+..5...5.<enableBLOB device="QHY CCD QHY5III290C-1ca">Also</enableBLOB><defSwitchVector device="QHY CCD QHY5III290C-1ca" name="CONNECTION" label="" group="" state="Ok" perm="rw" rule="OneOfMany" timeout="0" timestamp="2025-02-15T19:23:58.761">
+    <defSwitch name="CONNECT" label="CONNECT">On</defSwitch>
+    <defSwitch name="DISCONNECT" label="DISCONNECT">Off</defSwitch>
+</defSwitchVector>
+19:23:58.761888 IP localhost.7624 > localhost.46228: Flags [P.], seq 3640:4121, ack 476, win 510, options [nop,nop,TS val 3448255893 ecr 3448255893], length 481
+..5...5.<defTextVector device="QHY CCD QHY5III290C-1ca" name="DRIVER_INFO" label="Driver Info" group="General Info" state="Idle" perm="ro" timeout="60" timestamp="2025-02-16T03:23:58">
+    <defText name="DRIVER_NAME" label="Name">
+QHY CCD
+    </defText>
+    <defText name="DRIVER_EXEC" label="Exec">
+indi_qhy_ccd
+    </defText>
+    <defText name="DRIVER_VERSION" label="Version">
+2.8
+    </defText>
+    <defText name="DRIVER_INTERFACE" label="Interface">
+6
+    </defText>
+</defTextVector>
+
+..5...5.<defNumberVector device="QHY CCD QHY5III290C-1ca" name="POLLING_PERIOD" label="Polling" group="Options" state="Idle" perm="rw" timeout="0" timestamp="2025-02-16T03:23:58">
+    <defNumber name="PERIOD_MS" label="Period (ms)" format="%.f" min="10" max="600000" step="1000">
+1000
+    </defNumber>
+</defNumberVector>
+<defSwitchVector device="QHY CCD QHY5III290C-1ca" name="DEBUG" label="Debug" group="Options" state="Idle" perm="rw" rule="OneOfMany" timeout="0" timestamp="2025-02-16T03:23:58">
+    <defSwitch name="ENABLE" label="Enable">
+Off
+    </defSwitch>
+    <defSwitch name="DISABLE" label="Disable">
+On
+    </defSwitch>
+</defSwitchVector>
+<defSwitchVector device="QHY CCD QHY5III290C-1ca" name="SIMULATION" label="Simulation" group="Options" state="Idle" perm="rw" rule="OneOfMany" timeout="0" timestamp="2025-02-16T03:23:58">
+    <defSwitch name="ENABLE" label="Enable">
+Off
+    </defSwitch>
+    <defSwitch name="DISABLE" label="Disable">
+On
+    </defSwitch>
+</defSwitchVector>
+<defSwitchVector device="QHY CCD QHY5III290C-1ca" name="CONFIG_PROCESS" label="Configuration" group="Options" state="Alert" perm="rw" rule="AtMostOne" timeout="0" timestamp="2025-02-16T03:23:58">
+    <defSwitch name="CONFIG_LOAD" label="Load">
+Off
+    </defSwitch>
+    <defSwitch name="CONFIG_SAVE" label="Save">
+Off
+    </defSwitch>
+    <defSwitch name="CONFIG_DEFAULT" label="Default">
+Off
+    </defSwitch>
+    <defSwitch name="CONFIG_PURGE" label="Purge">
+Off
+    </defSwitch>
+</defSwitchVector>
+<defTextVector device="QHY CCD QHY5III290C-1ca" name="ACTIVE_DEVICES" label="Snoop devices" group="Options" state="Ok" perm="rw" timeout="60" timestamp="2025-02-16T03:23:58">
+    <defText name="ACTIVE_TELESCOPE" label="Telescope"/>
+    <defText name="ACTIVE_ROTATOR" label="Rotator"/>
+    <defText name="ACTIVE_FOCUSER" label="Focuser"/>
+    <defText name="ACTIVE_FILTER" label="Filter"/>
+    <defText name="ACTIVE_SKYQUALITY" label="Sky Quality">
+SQM
+    </defText>
+</defTextVector>
+<defTextVector device="QHY CCD QHY5III290C-1ca" name="ACTIVE_DEVICES" label="Snoop devices" group="Options" state="Ok" perm="rw" timeout="60" timestamp="2025-02-16T03:23:58">
+    <defText name="ACTIVE_TELESCOPE" label="Telescope"/>
+    <defText name="ACTIVE_ROTATOR" label="Rotator"/>
+    <defText name="ACTIVE_FOCUSER" label="Focuser"/>
+    <defText name="ACTIVE_FILTER" label="Filter"/>
+    <defText name="ACTIVE_SKYQUALITY" label="Sky Quality">
+SQM
+    </defText>
+</defTextVector>
+
+..?`..5.<getProperties version="1.7" device="QHY CCD QHY5III290C-1ca"/>
+19:24:01.269351 IP localhost.7624 > localhost.46228: Flags [P.], seq 6571:6925, ack 539, win 512, options [nop,nop,TS val 3448258401 ecr 3448258400], length 354
+..?a..?`<defSwitchVector device="QHY CCD QHY5III290C-1ca" name="CONNECTION" label="Connection" group="Main Control" state="Idle" perm="rw" rule="OneOfMany" timeout="60" timestamp="2025-02-16T03:24:01">
+    <defSwitch name="CONNECT" label="Connect">
+Off
+    </defSwitch>
+    <defSwitch name="DISCONNECT" label="Disconnect">
+On
+    </defSwitch>
+</defSwitchVector>
+
+..?a..?a<defTextVector device="QHY CCD QHY5III290C-1ca" name="DRIVER_INFO" label="Driver Info" group="General Info" state="Idle" perm="ro" timeout="60" timestamp="2025-02-16T03:24:01">
+    <defText name="DRIVER_NAME" label="Name">
+QHY CCD
+    </defText>
+    <defText name="DRIVER_EXEC" label="Exec">
+indi_qhy_ccd
+    </defText>
+    <defText name="DRIVER_VERSION" label="Version">
+2.8
+    </defText>
+    <defText name="DRIVER_INTERFACE" label="Interface">
+6
+    </defText>
+</defTextVector>
+
+..?a..?a<defNumberVector device="QHY CCD QHY5III290C-1ca" name="POLLING_PERIOD" label="Polling" group="Options" state="Idle" perm="rw" timeout="0" timestamp="2025-02-16T03:24:01">
+    <defNumber name="PERIOD_MS" label="Period (ms)" format="%.f" min="10" max="600000" step="1000">
+1000
+    </defNumber>
+</defNumberVector>
+
+..?a..?a<defSwitchVector device="QHY CCD QHY5III290C-1ca" name="DEBUG" label="Debug" group="Options" state="Idle" perm="rw" rule="OneOfMany" timeout="0" timestamp="2025-02-16T03:24:01">
+    <defSwitch name="ENABLE" label="Enable">
+Off
+    </defSwitch>
+    <defSwitch name="DISABLE" label="Disable">
+On
+    </defSwitch>
+</defSwitchVector>
+
+..?a..?a<defSwitchVector device="QHY CCD QHY5III290C-1ca" name="SIMULATION" label="Simulation" group="Options" state="Idle" perm="rw" rule="OneOfMany" timeout="0" timestamp="2025-02-16T03:24:01">
+    <defSwitch name="ENABLE" label="Enable">
+Off
+    </defSwitch>
+    <defSwitch name="DISABLE" label="Disable">
+On
+    </defSwitch>
+</defSwitchVector>
+
+..?a..?a<defSwitchVector device="QHY CCD QHY5III290C-1ca" name="CONFIG_PROCESS" label="Configuration" group="Options" state="Alert" perm="rw" rule="AtMostOne" timeout="0" timestamp="2025-02-16T03:24:01">
+    <defSwitch name="CONFIG_LOAD" label="Load">
+Off
+    </defSwitch>
+    <defSwitch name="CONFIG_SAVE" label="Save">
+Off
+    </defSwitch>
+    <defSwitch name="CONFIG_DEFAULT" label="Default">
+Off
+    </defSwitch>
+    <defSwitch name="CONFIG_PURGE" label="Purge">
+Off
+    </defSwitch>
+</defSwitchVector>
+
+..?a..?a<defTextVector device="QHY CCD QHY5III290C-1ca" name="ACTIVE_DEVICES" label="Snoop devices" group="Options" state="Ok" perm="rw" timeout="60" timestamp="2025-02-16T03:24:01">
+    <defText name="ACTIVE_TELESCOPE" label="Telescope"/>
+    <defText name="ACTIVE_ROTATOR" label="Rotator"/>
+    <defText name="ACTIVE_FOCUSER" label="Focuser"/>
+    <defText name="ACTIVE_FILTER" label="Filter"/>
+    <defText name="ACTIVE_SKYQUALITY" label="Sky Quality">
+SQM
+    </defText>
+</defTextVector>
+
+..?a..?a<defTextVector device="QHY CCD QHY5III290C-1ca" name="ACTIVE_DEVICES" label="Snoop devices" group="Options" state="Ok" perm="rw" timeout="60" timestamp="2025-02-16T03:24:01">
+    <defText name="ACTIVE_TELESCOPE" label="Telescope"/>
+    <defText name="ACTIVE_ROTATOR" label="Rotator"/>
+    <defText name="ACTIVE_FOCUSER" label="Focuser"/>
+    <defText name="ACTIVE_FILTER" label="Filter"/>
+    <defText name="ACTIVE_SKYQUALITY" label="Sky Quality">
+SQM
+    </defText>
+</defTextVector>
+
+..I+..?a<getProperties version="1.7" device="QHY CCD QHY5III290C-1ca"/>
+19:24:03.776016 IP localhost.7624 > localhost.46228: Flags [P.], seq 9856:10210, ack 602, win 512, options [nop,nop,TS val 3448260908 ecr 3448260907], length 354
+..I,..I+<defSwitchVector device="QHY CCD QHY5III290C-1ca" name="CONNECTION" label="Connection" group="Main Control" state="Idle" perm="rw" rule="OneOfMany" timeout="60" timestamp="2025-02-16T03:24:03">
+    <defSwitch name="CONNECT" label="Connect">
+Off
+    </defSwitch>
+    <defSwitch name="DISCONNECT" label="Disconnect">
+On
+    </defSwitch>
+</defSwitchVector>
+
+..I,..I,<defTextVector device="QHY CCD QHY5III290C-1ca" name="DRIVER_INFO" label="Driver Info" group="General Info" state="Idle" perm="ro" timeout="60" timestamp="2025-02-16T03:24:03">
+    <defText name="DRIVER_NAME" label="Name">
+QHY CCD
+    </defText>
+    <defText name="DRIVER_EXEC" label="Exec">
+indi_qhy_ccd
+    </defText>
+    <defText name="DRIVER_VERSION" label="Version">
+2.8
+    </defText>
+    <defText name="DRIVER_INTERFACE" label="Interface">
+6
+    </defText>
+</defTextVector>
+
+..I,..I,<defNumberVector device="QHY CCD QHY5III290C-1ca" name="POLLING_PERIOD" label="Polling" group="Options" state="Idle" perm="rw" timeout="0" timestamp="2025-02-16T03:24:03">
+    <defNumber name="PERIOD_MS" label="Period (ms)" format="%.f" min="10" max="600000" step="1000">
+1000
+    </defNumber>
+</defNumberVector>
+
+..I,..I,<defSwitchVector device="QHY CCD QHY5III290C-1ca" name="DEBUG" label="Debug" group="Options" state="Idle" perm="rw" rule="OneOfMany" timeout="0" timestamp="2025-02-16T03:24:03">
+    <defSwitch name="ENABLE" label="Enable">
+Off
+    </defSwitch>
+    <defSwitch name="DISABLE" label="Disable">
+On
+    </defSwitch>
+</defSwitchVector>
+
+..I,..I,<defSwitchVector device="QHY CCD QHY5III290C-1ca" name="SIMULATION" label="Simulation" group="Options" state="Idle" perm="rw" rule="OneOfMany" timeout="0" timestamp="2025-02-16T03:24:03">
+    <defSwitch name="ENABLE" label="Enable">
+Off
+    </defSwitch>
+    <defSwitch name="DISABLE" label="Disable">
+On
+    </defSwitch>
+</defSwitchVector>
+
+..I,..I,<defSwitchVector device="QHY CCD QHY5III290C-1ca" name="CONFIG_PROCESS" label="Configuration" group="Options" state="Alert" perm="rw" rule="AtMostOne" timeout="0" timestamp="2025-02-16T03:24:03">
+    <defSwitch name="CONFIG_LOAD" label="Load">
+Off
+    </defSwitch>
+    <defSwitch name="CONFIG_SAVE" label="Save">
+Off
+    </defSwitch>
+    <defSwitch name="CONFIG_DEFAULT" label="Default">
+Off
+    </defSwitch>
+    <defSwitch name="CONFIG_PURGE" label="Purge">
+Off
+    </defSwitch>
+</defSwitchVector>
+
+..I,..I,<defTextVector device="QHY CCD QHY5III290C-1ca" name="ACTIVE_DEVICES" label="Snoop devices" group="Options" state="Ok" perm="rw" timeout="60" timestamp="2025-02-16T03:24:03">
+    <defText name="ACTIVE_TELESCOPE" label="Telescope"/>
+    <defText name="ACTIVE_ROTATOR" label="Rotator"/>
+    <defText name="ACTIVE_FOCUSER" label="Focuser"/>
+    <defText name="ACTIVE_FILTER" label="Filter"/>
+    <defText name="ACTIVE_SKYQUALITY" label="Sky Quality">
+SQM
+    </defText>
+</defTextVector>
+
+..I,..I,<defTextVector device="QHY CCD QHY5III290C-1ca" name="ACTIVE_DEVICES" label="Snoop devices" group="Options" state="Ok" perm="rw" timeout="60" timestamp="2025-02-16T03:24:03">
+    <defText name="ACTIVE_TELESCOPE" label="Telescope"/>
+    <defText name="ACTIVE_ROTATOR" label="Rotator"/>
+    <defText name="ACTIVE_FOCUSER" label="Focuser"/>
+    <defText name="ACTIVE_FILTER" label="Filter"/>
+    <defText name="ACTIVE_SKYQUALITY" label="Sky Quality">
+SQM
+    </defText>
+</defTextVector>
+
+..R...I,<getProperties version="1.7" device="QHY CCD QHY5III290C-1ca"/>
+19:24:06.283654 IP localhost.7624 > localhost.46228: Flags [P.], seq 13141:13495, ack 665, win 512, options [nop,nop,TS val 3448263415 ecr 3448263415], length 354
+..R...R.<defSwitchVector device="QHY CCD QHY5III290C-1ca" name="CONNECTION" label="Connection" group="Main Control" state="Idle" perm="rw" rule="OneOfMany" timeout="60" timestamp="2025-02-16T03:24:06">
+    <defSwitch name="CONNECT" label="Connect">
+Off
+    </defSwitch>
+    <defSwitch name="DISCONNECT" label="Disconnect">
+On
+    </defSwitch>
+</defSwitchVector>
+
+..R...R.<defTextVector device="QHY CCD QHY5III290C-1ca" name="DRIVER_INFO" label="Driver Info" group="General Info" state="Idle" perm="ro" timeout="60" timestamp="2025-02-16T03:24:06">
+    <defText name="DRIVER_NAME" label="Name">
+QHY CCD
+    </defText>
+    <defText name="DRIVER_EXEC" label="Exec">
+indi_qhy_ccd
+    </defText>
+    <defText name="DRIVER_VERSION" label="Version">
+2.8
+    </defText>
+    <defText name="DRIVER_INTERFACE" label="Interface">
+6
+    </defText>
+</defTextVector>
+
+..R...R.<defNumberVector device="QHY CCD QHY5III290C-1ca" name="POLLING_PERIOD" label="Polling" group="Options" state="Idle" perm="rw" timeout="0" timestamp="2025-02-16T03:24:06">
+    <defNumber name="PERIOD_MS" label="Period (ms)" format="%.f" min="10" max="600000" step="1000">
+1000
+    </defNumber>
+</defNumberVector>
+
+..R...R.<defSwitchVector device="QHY CCD QHY5III290C-1ca" name="DEBUG" label="Debug" group="Options" state="Idle" perm="rw" rule="OneOfMany" timeout="0" timestamp="2025-02-16T03:24:06">
+    <defSwitch name="ENABLE" label="Enable">
+Off
+    </defSwitch>
+    <defSwitch name="DISABLE" label="Disable">
+On
+    </defSwitch>
+</defSwitchVector>
+
+..R...R.<defSwitchVector device="QHY CCD QHY5III290C-1ca" name="SIMULATION" label="Simulation" group="Options" state="Idle" perm="rw" rule="OneOfMany" timeout="0" timestamp="2025-02-16T03:24:06">
+    <defSwitch name="ENABLE" label="Enable">
+Off
+    </defSwitch>
+    <defSwitch name="DISABLE" label="Disable">
+On
+    </defSwitch>
+</defSwitchVector>
+
+..R...R.<defSwitchVector device="QHY CCD QHY5III290C-1ca" name="CONFIG_PROCESS" label="Configuration" group="Options" state="Alert" perm="rw" rule="AtMostOne" timeout="0" timestamp="2025-02-16T03:24:06">
+    <defSwitch name="CONFIG_LOAD" label="Load">
+Off
+    </defSwitch>
+    <defSwitch name="CONFIG_SAVE" label="Save">
+Off
+    </defSwitch>
+    <defSwitch name="CONFIG_DEFAULT" label="Default">
+Off
+    </defSwitch>
+    <defSwitch name="CONFIG_PURGE" label="Purge">
+Off
+    </defSwitch>
+</defSwitchVector>
+
+..R...R.<defTextVector device="QHY CCD QHY5III290C-1ca" name="ACTIVE_DEVICES" label="Snoop devices" group="Options" state="Ok" perm="rw" timeout="60" timestamp="2025-02-16T03:24:06">
+    <defText name="ACTIVE_TELESCOPE" label="Telescope"/>
+    <defText name="ACTIVE_ROTATOR" label="Rotator"/>
+    <defText name="ACTIVE_FOCUSER" label="Focuser"/>
+    <defText name="ACTIVE_FILTER" label="Filter"/>
+    <defText name="ACTIVE_SKYQUALITY" label="Sky Quality">
+SQM
+    </defText>
+</defTextVector>
+
+..R...R.<defTextVector device="QHY CCD QHY5III290C-1ca" name="ACTIVE_DEVICES" label="Snoop devices" group="Options" state="Ok" perm="rw" timeout="60" timestamp="2025-02-16T03:24:06">
+    <defText name="ACTIVE_TELESCOPE" label="Telescope"/>
+    <defText name="ACTIVE_ROTATOR" label="Rotator"/>
+    <defText name="ACTIVE_FOCUSER" label="Focuser"/>
+    <defText name="ACTIVE_FILTER" label="Filter"/>
+    <defText name="ACTIVE_SKYQUALITY" label="Sky Quality">
+SQM
+    </defText>
+</defTextVector>
+
+..\...R.<getProperties version="1.7" device="QHY CCD QHY5III290C-1ca"/>
+19:24:08.790892 IP localhost.7624 > localhost.46228: Flags [P.], seq 16426:16780, ack 728, win 512, options [nop,nop,TS val 3448265922 ecr 3448265922], length 354
+..\...\.<defSwitchVector device="QHY CCD QHY5III290C-1ca" name="CONNECTION" label="Connection" group="Main Control" state="Idle" perm="rw" rule="OneOfMany" timeout="60" timestamp="2025-02-16T03:24:08">
+    <defSwitch name="CONNECT" label="Connect">
+Off
+    </defSwitch>
+    <defSwitch name="DISCONNECT" label="Disconnect">
+On
+    </defSwitch>
+</defSwitchVector>
+
+..\...\.<defTextVector device="QHY CCD QHY5III290C-1ca" name="DRIVER_INFO" label="Driver Info" group="General Info" state="Idle" perm="ro" timeout="60" timestamp="2025-02-16T03:24:08">
+    <defText name="DRIVER_NAME" label="Name">
+QHY CCD
+    </defText>
+    <defText name="DRIVER_EXEC" label="Exec">
+indi_qhy_ccd
+    </defText>
+    <defText name="DRIVER_VERSION" label="Version">
+2.8
+    </defText>
+    <defText name="DRIVER_INTERFACE" label="Interface">
+6
+    </defText>
+</defTextVector>
+
+..\...\.<defNumberVector device="QHY CCD QHY5III290C-1ca" name="POLLING_PERIOD" label="Polling" group="Options" state="Idle" perm="rw" timeout="0" timestamp="2025-02-16T03:24:08">
+    <defNumber name="PERIOD_MS" label="Period (ms)" format="%.f" min="10" max="600000" step="1000">
+1000
+    </defNumber>
+</defNumberVector>
+
+..\...\.<defSwitchVector device="QHY CCD QHY5III290C-1ca" name="DEBUG" label="Debug" group="Options" state="Idle" perm="rw" rule="OneOfMany" timeout="0" timestamp="2025-02-16T03:24:08">
+    <defSwitch name="ENABLE" label="Enable">
+Off
+    </defSwitch>
+    <defSwitch name="DISABLE" label="Disable">
+On
+    </defSwitch>
+</defSwitchVector>
+
+..\...\.<defSwitchVector device="QHY CCD QHY5III290C-1ca" name="SIMULATION" label="Simulation" group="Options" state="Idle" perm="rw" rule="OneOfMany" timeout="0" timestamp="2025-02-16T03:24:08">
+    <defSwitch name="ENABLE" label="Enable">
+Off
+    </defSwitch>
+    <defSwitch name="DISABLE" label="Disable">
+On
+    </defSwitch>
+</defSwitchVector>
+
+..\...\.<defSwitchVector device="QHY CCD QHY5III290C-1ca" name="CONFIG_PROCESS" label="Configuration" group="Options" state="Alert" perm="rw" rule="AtMostOne" timeout="0" timestamp="2025-02-16T03:24:08">
+    <defSwitch name="CONFIG_LOAD" label="Load">
+Off
+    </defSwitch>
+    <defSwitch name="CONFIG_SAVE" label="Save">
+Off
+    </defSwitch>
+    <defSwitch name="CONFIG_DEFAULT" label="Default">
+Off
+    </defSwitch>
+    <defSwitch name="CONFIG_PURGE" label="Purge">
+Off
+    </defSwitch>
+</defSwitchVector>
+
+..\...\.<defTextVector device="QHY CCD QHY5III290C-1ca" name="ACTIVE_DEVICES" label="Snoop devices" group="Options" state="Ok" perm="rw" timeout="60" timestamp="2025-02-16T03:24:08">
+    <defText name="ACTIVE_TELESCOPE" label="Telescope"/>
+    <defText name="ACTIVE_ROTATOR" label="Rotator"/>
+    <defText name="ACTIVE_FOCUSER" label="Focuser"/>
+    <defText name="ACTIVE_FILTER" label="Filter"/>
+    <defText name="ACTIVE_SKYQUALITY" label="Sky Quality">
+SQM
+    </defText>
+</defTextVector>
+
+..\...\.<defTextVector device="QHY CCD QHY5III290C-1ca" name="ACTIVE_DEVICES" label="Snoop devices" group="Options" state="Ok" perm="rw" timeout="60" timestamp="2025-02-16T03:24:08">
+    <defText name="ACTIVE_TELESCOPE" label="Telescope"/>
+    <defText name="ACTIVE_ROTATOR" label="Rotator"/>
+    <defText name="ACTIVE_FOCUSER" label="Focuser"/>
+    <defText name="ACTIVE_FILTER" label="Filter"/>
+    <defText name="ACTIVE_SKYQUALITY" label="Sky Quality">
+SQM
+    </defText>
+</defTextVector>
+
+..f...\.<getProperties version="1.7" device="QHY CCD QHY5III290C-1ca"/>
+19:24:11.299460 IP localhost.7624 > localhost.46228: Flags [P.], seq 19711:20065, ack 791, win 512, options [nop,nop,TS val 3448268431 ecr 3448268430], length 354
+..f...f.<defSwitchVector device="QHY CCD QHY5III290C-1ca" name="CONNECTION" label="Connection" group="Main Control" state="Idle" perm="rw" rule="OneOfMany" timeout="60" timestamp="2025-02-16T03:24:11">
+    <defSwitch name="CONNECT" label="Connect">
+Off
+    </defSwitch>
+    <defSwitch name="DISCONNECT" label="Disconnect">
+On
+    </defSwitch>
+</defSwitchVector>
+
+..f...f.<defTextVector device="QHY CCD QHY5III290C-1ca" name="DRIVER_INFO" label="Driver Info" group="General Info" state="Idle" perm="ro" timeout="60" timestamp="2025-02-16T03:24:11">
+    <defText name="DRIVER_NAME" label="Name">
+QHY CCD
+    </defText>
+    <defText name="DRIVER_EXEC" label="Exec">
+indi_qhy_ccd
+    </defText>
+    <defText name="DRIVER_VERSION" label="Version">
+2.8
+    </defText>
+    <defText name="DRIVER_INTERFACE" label="Interface">
+6
+    </defText>
+</defTextVector>
+
+..f...f.<defNumberVector device="QHY CCD QHY5III290C-1ca" name="POLLING_PERIOD" label="Polling" group="Options" state="Idle" perm="rw" timeout="0" timestamp="2025-02-16T03:24:11">
+    <defNumber name="PERIOD_MS" label="Period (ms)" format="%.f" min="10" max="600000" step="1000">
+1000
+    </defNumber>
+</defNumberVector>
+
+..f...f.<defSwitchVector device="QHY CCD QHY5III290C-1ca" name="DEBUG" label="Debug" group="Options" state="Idle" perm="rw" rule="OneOfMany" timeout="0" timestamp="2025-02-16T03:24:11">
+    <defSwitch name="ENABLE" label="Enable">
+Off
+    </defSwitch>
+    <defSwitch name="DISABLE" label="Disable">
+On
+    </defSwitch>
+</defSwitchVector>
+
+..f...f.<defSwitchVector device="QHY CCD QHY5III290C-1ca" name="SIMULATION" label="Simulation" group="Options" state="Idle" perm="rw" rule="OneOfMany" timeout="0" timestamp="2025-02-16T03:24:11">
+    <defSwitch name="ENABLE" label="Enable">
+Off
+    </defSwitch>
+    <defSwitch name="DISABLE" label="Disable">
+On
+    </defSwitch>
+</defSwitchVector>
+
+..f...f.<defSwitchVector device="QHY CCD QHY5III290C-1ca" name="CONFIG_PROCESS" label="Configuration" group="Options" state="Alert" perm="rw" rule="AtMostOne" timeout="0" timestamp="2025-02-16T03:24:11">
+    <defSwitch name="CONFIG_LOAD" label="Load">
+Off
+    </defSwitch>
+    <defSwitch name="CONFIG_SAVE" label="Save">
+Off
+    </defSwitch>
+    <defSwitch name="CONFIG_DEFAULT" label="Default">
+Off
+    </defSwitch>
+    <defSwitch name="CONFIG_PURGE" label="Purge">
+Off
+    </defSwitch>
+</defSwitchVector>
+
+..f...f.<defTextVector device="QHY CCD QHY5III290C-1ca" name="ACTIVE_DEVICES" label="Snoop devices" group="Options" state="Ok" perm="rw" timeout="60" timestamp="2025-02-16T03:24:11">
+    <defText name="ACTIVE_TELESCOPE" label="Telescope"/>
+    <defText name="ACTIVE_ROTATOR" label="Rotator"/>
+    <defText name="ACTIVE_FOCUSER" label="Focuser"/>
+    <defText name="ACTIVE_FILTER" label="Filter"/>
+    <defText name="ACTIVE_SKYQUALITY" label="Sky Quality">
+SQM
+    </defText>
+</defTextVector>
+
+..f...f.<defTextVector device="QHY CCD QHY5III290C-1ca" name="ACTIVE_DEVICES" label="Snoop devices" group="Options" state="Ok" perm="rw" timeout="60" timestamp="2025-02-16T03:24:11">
+    <defText name="ACTIVE_TELESCOPE" label="Telescope"/>
+    <defText name="ACTIVE_ROTATOR" label="Rotator"/>
+    <defText name="ACTIVE_FOCUSER" label="Focuser"/>
+    <defText name="ACTIVE_FILTER" label="Filter"/>
+    <defText name="ACTIVE_SKYQUALITY" label="Sky Quality">
+SQM
+    </defText>
+</defTextVector>
+
+..pZ..f.<getProperties version="1.7" device="QHY CCD QHY5III290C-1ca"/>
+19:24:13.806327 IP localhost.46228 > localhost.7624: Flags [F.], seq 854, ack 22996, win 741, options [nop,nop,TS val 3448270938 ecr 3448268431], length 0
