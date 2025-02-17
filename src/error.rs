@@ -4,7 +4,6 @@ use quick_xml::de::DeError as XmlDeError;
 use quick_xml::events::attributes::AttrError;
 use quick_xml::Error as XmlError;
 use std::io;
-use std::string::FromUtf8Error;
 use thiserror::Error;
 
 /// Result type for the crate
@@ -41,9 +40,9 @@ pub enum Error {
     #[error("Invalid switch state: {0}")]
     InvalidSwitchState(String),
 
-    /// UTF-8 error
-    #[error("UTF-8 error: {0}")]
-    Utf8(#[from] FromUtf8Error),
+    /// UTF-8 conversion error
+    #[error("UTF-8 conversion error: {0}")]
+    Utf8(#[from] std::str::Utf8Error),
 
     /// XML deserialization error
     #[error("XML deserialization error: {0}")]

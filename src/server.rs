@@ -1,5 +1,4 @@
 use std::collections::HashMap;
-use std::str::FromStr;
 use std::sync::Arc;
 
 use tokio::io::{AsyncBufReadExt, BufReader};
@@ -8,6 +7,7 @@ use tokio::sync::Mutex;
 
 use crate::error::Result;
 use crate::message::MessageType;
+use quick_xml::de::from_str;
 use tracing::debug;
 
 /// Server configuration
@@ -92,34 +92,29 @@ impl Server {
     async fn handle_client(socket: TcpStream, state: Arc<Mutex<ServerState>>) -> Result<()> {
         let (reader, _writer) = socket.into_split();
         let mut reader = BufReader::new(reader);
-        let mut buffer = String::new();
+        let mut buffer = Vec::new();
 
         loop {
             buffer.clear();
-            match reader.read_line(&mut buffer).await {
+            match reader.read_until(b'\n', &mut buffer).await {
                 Ok(0) => {
                     debug!("Client disconnected");
                     break;
                 }
                 Ok(_) => {
-                    debug!("Received message: {}", buffer);
-                    match MessageType::from_str(&buffer) {
-                        Ok(message) => {
-                            let mut state = state.lock().await;
-                            state.update(&message);
-                        }
-                        Err(e) => {
-                            debug!("Failed to parse message: {}", e);
-                        }
+                    if let Ok(message) = from_str(std::str::from_utf8(&buffer)?) {
+                        let mut state = state.lock().await;
+                        state.update(&message);
+                    } else {
+                        debug!("Failed to parse XML message");
                     }
                 }
                 Err(e) => {
-                    debug!("Error reading from client: {}", e);
+                    debug!("Error reading from socket: {}", e);
                     break;
                 }
             }
         }
-
         Ok(())
     }
 }

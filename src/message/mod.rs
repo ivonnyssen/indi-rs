@@ -1,4 +1,5 @@
 use crate::error::{Error, Result};
+use quick_xml::de::from_str;
 use quick_xml::se::to_string;
 use serde::{Deserialize, Serialize};
 use std::str::FromStr;
@@ -79,12 +80,17 @@ impl MessageType {
     pub fn to_xml(&self) -> Result<String> {
         to_string(&self).map_err(|e| Error::SerializationError(e.to_string()))
     }
+
+    /// Parse a message from bytes asynchronously
+    pub async fn from_bytes(bytes: &[u8]) -> Result<Self> {
+        from_str(std::str::from_utf8(bytes).unwrap()).map_err(Error::XmlDe)
+    }
 }
 
 impl FromStr for MessageType {
     type Err = Error;
 
     fn from_str(s: &str) -> Result<Self> {
-        quick_xml::de::from_str(s).map_err(Error::XmlDe)
+        from_str(s).map_err(Error::XmlDe)
     }
 }

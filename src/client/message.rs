@@ -7,6 +7,7 @@ use crate::message::{EnableBLOB, GetProperties, Message, MessageType};
 use crate::property::Property;
 use quick_xml::de::from_str;
 use std::collections::HashMap;
+use std::str;
 use tokio::io::AsyncWriteExt;
 
 impl Client {
@@ -23,14 +24,14 @@ impl Client {
     /// Handle a message from the server
     pub async fn handle_message(&mut self, message: Message) -> Result<()> {
         let mut state = self.state.lock().await;
-        let content = message.content;
+        let content = str::from_utf8(message.content.as_bytes())?;
 
         // Try to parse the message content as different property types
-        if let Ok(prop) = from_str::<DefTextVector>(&content) {
+        if let Ok(prop) = from_str::<DefTextVector>(content) {
             state.update_text_vector(prop)?;
-        } else if let Ok(prop) = from_str::<DefNumberVector>(&content) {
+        } else if let Ok(prop) = from_str::<DefNumberVector>(content) {
             state.update_number_vector(prop)?;
-        } else if let Ok(prop) = from_str::<DefSwitchVector>(&content) {
+        } else if let Ok(prop) = from_str::<DefSwitchVector>(content) {
             state.update_switch_vector(prop)?;
         }
 
