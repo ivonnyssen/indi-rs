@@ -38,7 +38,7 @@ async fn test_client_disconnect() {
 
     // Connect first
     client.connect().await.unwrap();
-    
+
     assert!(client.disconnect().await.is_ok());
 }
 
