@@ -10,11 +10,11 @@ use indi_rs::property::{PropertyState, PropertyValue, SwitchState};
 #[command(author, version, about, long_about = None)]
 struct Args {
     /// INDI server host
-    #[arg(short, long, default_value = "localhost")]
+    #[arg(short = 'H', long, default_value = "localhost")]
     host: String,
 
     /// INDI server port
-    #[arg(short, long, default_value_t = 7624)]
+    #[arg(short = 'P', long, default_value_t = 7624)]
     port: u16,
 
     /// Device to connect to
