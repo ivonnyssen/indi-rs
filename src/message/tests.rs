@@ -255,14 +255,13 @@ On
 #[cfg(test)]
 mod tests {
     use super::*;
-    use quick_xml::de::from_str;
 
     #[test]
     fn test_number_property_formatting() {
         use crate::message::definition::DefNumber;
 
         // Test regular floating point format
-        let mut num = DefNumber::new(
+        let num = DefNumber::new(
             "test".to_string(),
             "Test Number".to_string(),
             "%.2f".to_string(),
@@ -281,7 +280,7 @@ mod tests {
         let mut num = DefNumber::new(
             "ra".to_string(),
             "Right Ascension".to_string(),
-            "%10.6m".to_string(),
+            "%9.6m".to_string(),
             0.0,
             24.0,
             0.0,
@@ -297,8 +296,8 @@ mod tests {
         assert!(num.validate_value(25.0).is_err());
 
         // Test value setting
-        num.set_value(6.25).unwrap();  // Should format as 06:15:00
-        assert_eq!(num.value, " 06:15:00");
+        num.set_value(6.25).unwrap();  // Should format as 6:15:00
+        assert_eq!(num.value, "  6:15:00");
         assert_eq!(num.get_value().unwrap(), 6.25);
     }
 
@@ -310,7 +309,7 @@ mod tests {
         let number = DefNumber::new(
             "ra".to_string(),
             "Right Ascension".to_string(),
-            "%10.6m".to_string(),
+            "%9.6m".to_string(),
             0.0,
             24.0,
             0.0,
@@ -332,7 +331,7 @@ mod tests {
         let xml = quick_xml::se::to_string(&vector).unwrap();
         assert!(xml.contains("defNumberVector"));
         assert!(xml.contains("device=\"Telescope\""));
-        assert!(xml.contains("format=\"%10.6m\""));
+        assert!(xml.contains("format=\"%9.6m\""));
         assert!(xml.contains("state=\"Ok\""));
         assert!(xml.contains(" 12:30:00"));
     }

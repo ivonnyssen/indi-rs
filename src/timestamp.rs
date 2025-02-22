@@ -111,13 +111,20 @@ mod tests {
 
     #[test]
     fn test_timestamp_creation() {
-        let ts = INDITimestamp::now(Some(1));
+        // Test with a fixed datetime instead of now() to avoid intermittent failures
+        let dt = DateTime::parse_from_rfc3339("2024-02-21T19:30:00.123456789Z")
+            .unwrap()
+            .with_timezone(&Utc);
+        
+        let ts = INDITimestamp::from_datetime(dt, Some(1));
         let pattern = Regex::new(r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d$").unwrap();
         assert!(pattern.is_match(&ts.to_string()), "Timestamp {} doesn't match pattern", ts);
+        assert_eq!(ts.to_string(), "2024-02-21T19:30:00.1");
 
-        let ts = INDITimestamp::now(Some(3));
+        let ts = INDITimestamp::from_datetime(dt, Some(3));
         let pattern = Regex::new(r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}$").unwrap();
         assert!(pattern.is_match(&ts.to_string()), "Timestamp {} doesn't match pattern", ts);
+        assert_eq!(ts.to_string(), "2024-02-21T19:30:00.123");
     }
 
     #[test]
