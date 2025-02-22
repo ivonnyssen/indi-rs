@@ -12,6 +12,11 @@ pub mod definition;
 pub mod new;
 /// Message types for setting property values
 pub mod set;
+/// Message types for BLOB data
+pub mod blob;
+/// Tests for the message module
+#[cfg(test)]
+mod tests;
 
 /// Raw message content
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -29,57 +34,50 @@ impl Message {
 
 /// INDI message type
 #[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(rename_all = "lowercase")]
+#[serde(rename_all = "camelCase")]
 pub enum MessageType {
     /// Get properties request
-    GetProperties(GetProperties),
+    GetProperties(basic::GetProperties),
     /// General message
     Message(Message),
     /// Enable BLOB transfer
-    EnableBLOB(EnableBLOB),
+    EnableBLOB(blob::EnableBlob),
     /// Define text vector
     DefTextVector(definition::DefTextVector),
     /// Define number vector
     DefNumberVector(definition::DefNumberVector),
     /// Define switch vector
     DefSwitchVector(definition::DefSwitchVector),
+    /// Define BLOB vector
+    DefBLOBVector(definition::DefBLOBVector),
     /// New text vector
     NewTextVector(new::NewTextVector),
     /// New number vector
     NewNumberVector(new::NewNumberVector),
     /// New switch vector
     NewSwitchVector(new::NewSwitchVector),
+    /// New BLOB vector
+    NewBLOBVector(blob::NewBLOBVector),
     /// Set text vector
     SetTextVector(set::SetTextVector),
     /// Set number vector
     SetNumberVector(set::SetNumberVector),
     /// Set switch vector
     SetSwitchVector(set::SetSwitchVector),
+    /// Set BLOB vector
+    SetBLOBVector(blob::SetBLOBVector),
 }
 
-/// Get properties message
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct GetProperties {
-    /// Protocol version
-    pub version: String,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    /// Device name (optional)
-    pub device: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    /// Property name (optional)
-    pub name: Option<String>,
-}
-
-/// Enable BLOB message
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct EnableBLOB {
-    /// Device name
-    pub device: String,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    /// Property name (optional)
-    pub name: Option<String>,
-    /// BLOB enable value
-    pub value: String,
+/// BLOB enable values
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "PascalCase")]
+pub enum BLOBEnable {
+    /// Never send BLOB data
+    Never,
+    /// Send BLOB data along with other messages
+    Also,
+    /// Only send BLOB data
+    Only,
 }
 
 impl MessageType {

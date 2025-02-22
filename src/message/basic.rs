@@ -41,29 +41,3 @@ pub struct DelProperty {
     #[serde(rename = "@device")]
     pub device: String,
 }
-
-/// BLOB enable values
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
-pub enum BLOBEnable {
-    /// Never send setBLOB messages (default)
-    Never,
-    /// Allow setBLOB messages to be intermixed with other commands
-    Also,
-    /// Only send setBLOB messages
-    Only,
-}
-
-/// Enable BLOB message - controls whether setBLOBs should be sent to this channel
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(rename = "enableBLOB")]
-pub struct EnableBlob {
-    /// Device name
-    #[serde(rename = "@device")]
-    pub device: String,
-    /// Property name (optional)
-    #[serde(rename = "@name", skip_serializing_if = "Option::is_none")]
-    pub name: Option<String>,
-    /// BLOB enable value
-    #[serde(rename = "$text")]
-    pub value: BLOBEnable,
-}

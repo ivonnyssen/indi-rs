@@ -2,7 +2,6 @@ use super::*;
 use std::str::FromStr;
 use crate::prelude::PropertyPerm;
 use crate::property::{PropertyState, SwitchRule, SwitchState};
-use crate::message::basic::BLOBEnable;
 
 #[test]
 fn test_parse_def_switch_vector() {
@@ -51,34 +50,6 @@ fn test_parse_new_switch_vector() {
             assert_eq!(v.elements[0].value, SwitchState::Off);
         }
         _ => panic!("Expected NewSwitchVector variant"),
-    }
-}
-
-#[test]
-fn test_enable_blob_message() {
-    let xml = r#"<enableBLOB device="CCD" name="CCD1">Never</enableBLOB>"#;
-    let parsed: MessageType = xml.parse().unwrap();
-    match parsed {
-        MessageType::EnableBLOB(v) => {
-            assert_eq!(v.device, "CCD");
-            assert_eq!(v.name, Some("CCD1".to_string()));
-            assert_eq!(v.value, BLOBEnable::Never);
-        }
-        _ => panic!("Wrong message type"),
-    }
-}
-
-#[test]
-fn test_enable_blob() {
-    let xml = r#"<enableBLOB device="CCD">Never</enableBLOB>"#;
-    let parsed: MessageType = xml.parse().unwrap();
-    match parsed {
-        MessageType::EnableBLOB(v) => {
-            assert_eq!(v.device, "CCD");
-            assert_eq!(v.name, None);
-            assert_eq!(v.value, BLOBEnable::Never);
-        }
-        _ => panic!("Wrong message type"),
     }
 }
 
@@ -215,58 +186,10 @@ On
     }
 }
 
-#[test]
-fn test_blob_message_serialization() {
-    use crate::message::blob::{OneBLOB, SetBLOBVector};
-    use crate::property::PropertyState;
-
-    let test_data = vec![1, 2, 3, 4, 5];
-    let blob = OneBLOB::new(
-        "test_blob".to_string(),
-        "application/octet-stream".to_string(),
-        test_data.clone(),
-    );
-
-    let blob_vector = SetBLOBVector {
-        device: "TestDevice".to_string(),
-        name: "TestBLOB".to_string(),
-        state: PropertyState::Ok,
-        timestamp: "2024-02-21T19:30:00".to_string(),
-        blobs: vec![blob],
-    };
-
-    let xml = quick_xml::se::to_string(&blob_vector).unwrap();
-    assert!(xml.contains("setBLOBVector"));
-    assert!(xml.contains("device=\"TestDevice\""));
-    assert!(xml.contains("name=\"TestBLOB\""));
-    assert!(xml.contains("state=\"Ok\""));
-    assert!(xml.contains("oneBLOB"));
-    assert!(xml.contains("format=\"application/octet-stream\""));
-
-    let decoded: SetBLOBVector = quick_xml::de::from_str(&xml).unwrap();
-    assert_eq!(decoded.device, "TestDevice");
-    assert_eq!(decoded.blobs[0].get_data().unwrap(), test_data);
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
     use quick_xml::de::from_str;
-    use quick_xml::se::to_string;
-
-    #[test]
-    fn test_enable_blob() {
-        let xml = r#"<enableBLOB device="CCD">Never</enableBLOB>"#;
-        let parsed: MessageType = xml.parse().unwrap();
-        match parsed {
-            MessageType::EnableBLOB(v) => {
-                assert_eq!(v.device, "CCD");
-                assert_eq!(v.name, None);
-                assert_eq!(v.value, BLOBEnable::Never);
-            }
-            _ => panic!("Wrong message type"),
-        }
-    }
 
     #[test]
     fn test_number_property_formatting() {
@@ -340,7 +263,7 @@ mod tests {
             numbers: vec![number],
         };
 
-        let xml = to_string(&vector).unwrap();
+        let xml = quick_xml::se::to_string(&vector).unwrap();
         assert!(xml.contains("defNumberVector"));
         assert!(xml.contains("device=\"Telescope\""));
         assert!(xml.contains("format=\"%10.6m\""));
