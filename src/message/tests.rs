@@ -104,7 +104,8 @@ fn test_set_number_vector() {
 
 #[test]
 fn test_set_switch_vector() {
-    let xml = r#"<setSwitchVector device="Telescope Mount" name="TELESCOPE_SLEW_RATE" timestamp="2024-01-01T00:00:00">
+    // Test with all optional fields
+    let xml = r#"<setSwitchVector device="Telescope Mount" name="TELESCOPE_SLEW_RATE" state="Ok" timeout="60" timestamp="2024-01-01T00:00:00" message="Setting slew rate">
         <oneSwitch name="SLEW_GUIDE">Off</oneSwitch>
         <oneSwitch name="SLEW_CENTERING">On</oneSwitch>
         <oneSwitch name="SLEW_FIND">Off</oneSwitch>
@@ -116,10 +117,37 @@ fn test_set_switch_vector() {
         MessageType::SetSwitchVector(v) => {
             assert_eq!(v.device, "Telescope Mount");
             assert_eq!(v.name, "TELESCOPE_SLEW_RATE");
+            assert_eq!(v.state, Some(PropertyState::Ok));
+            assert_eq!(v.timeout, Some(60.0));
+            assert_eq!(v.message, Some("Setting slew rate".to_string()));
             assert_eq!(v.switches.len(), 4);
             assert_eq!(v.switches[0].name, "SLEW_GUIDE");
             assert_eq!(v.switches[0].value, SwitchState::Off);
-            assert_eq!(v.timestamp, "2024-01-01T00:00:00".parse::<INDITimestamp>().unwrap());
+            assert_eq!(v.timestamp, Some("2024-01-01T00:00:00".parse::<INDITimestamp>().unwrap()));
+        }
+        _ => panic!("Expected SetSwitchVector variant"),
+    }
+
+    // Test with minimal required fields
+    let xml = r#"<setSwitchVector device="Telescope Mount" name="TELESCOPE_SLEW_RATE">
+        <oneSwitch name="SLEW_GUIDE">Off</oneSwitch>
+        <oneSwitch name="SLEW_CENTERING">On</oneSwitch>
+        <oneSwitch name="SLEW_FIND">Off</oneSwitch>
+        <oneSwitch name="SLEW_MAX">Off</oneSwitch>
+    </setSwitchVector>"#;
+
+    let message = MessageType::from_str(xml).unwrap();
+    match message {
+        MessageType::SetSwitchVector(v) => {
+            assert_eq!(v.device, "Telescope Mount");
+            assert_eq!(v.name, "TELESCOPE_SLEW_RATE");
+            assert_eq!(v.state, None);
+            assert_eq!(v.timeout, None);
+            assert_eq!(v.message, None);
+            assert_eq!(v.switches.len(), 4);
+            assert_eq!(v.switches[0].name, "SLEW_GUIDE");
+            assert_eq!(v.switches[0].value, SwitchState::Off);
+            assert_eq!(v.timestamp, None);
         }
         _ => panic!("Expected SetSwitchVector variant"),
     }

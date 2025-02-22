@@ -46,15 +46,28 @@ pub struct SetNumberVector {
 
 /// Set switch vector message
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename = "setSwitchVector")]
 pub struct SetSwitchVector {
     /// Device name
+    #[serde(rename = "@device")]
     pub device: String,
     /// Property name
+    #[serde(rename = "@name")]
     pub name: String,
-    /// Property timestamp
-    #[serde(rename = "@timestamp")]
-    pub timestamp: INDITimestamp,
-    /// Switch elements
+    /// Property state (optional)
+    #[serde(rename = "@state", skip_serializing_if = "Option::is_none")]
+    pub state: Option<PropertyState>,
+    /// Worse-case time to affect a change (optional)
+    #[serde(rename = "@timeout", skip_serializing_if = "Option::is_none")]
+    pub timeout: Option<f64>,
+    /// Property timestamp (optional)
+    #[serde(rename = "@timestamp", skip_serializing_if = "Option::is_none")]
+    pub timestamp: Option<INDITimestamp>,
+    /// Commentary message (optional)
+    #[serde(rename = "@message", skip_serializing_if = "Option::is_none")]
+    pub message: Option<String>,
+    /// Switch elements (at least one required)
+    #[serde(rename = "oneSwitch")]
     pub switches: Vec<OneSwitch>,
 }
 
