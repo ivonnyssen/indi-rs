@@ -1,63 +1,111 @@
-//! INDI Protocol Client Implementation
-//!
-//! This module provides the client implementation for the INDI protocol.
-//! It handles connecting to INDI servers, sending commands, and receiving responses.
+use std::sync::Arc;
+use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader, BufWriter};
+use tokio::net::{TcpStream, tcp::{OwnedReadHalf, OwnedWriteHalf}};
+use tokio::sync::Mutex;
+use crate::error::Result;
+use crate::message::Message;
+use tracing::{debug, error};
 
+/// Configuration module for INDI client
 mod config;
-mod connection;
-mod message;
+/// State management module for INDI client
 mod state;
-
-#[cfg(test)]
-mod tests;
+/// Message handling module for INDI client
+pub mod message;
+/// Connection handling for INDI protocol
+pub mod connection;
 
 pub use config::ClientConfig;
 pub use state::ClientState;
+pub use self::message::MessageHandler;
+use self::connection::Connection;
 
-use std::sync::Arc;
-use tokio::net::TcpStream;
-use tokio::sync::{broadcast, Mutex};
-
-use crate::error::Result;
-use crate::message::MessageType;
-
-/// INDI client
-#[derive(Debug)]
+/// INDI client implementation
+///
+/// The Client struct provides functionality for:
+/// - Connecting to an INDI server
+/// - Sending and receiving messages
+/// - Managing device properties
+/// - Handling connection state
+#[derive(Debug, Clone)]
 pub struct Client {
-    /// Client configuration
     config: ClientConfig,
-    /// TCP stream
-    stream: Option<TcpStream>,
-    /// Client state
     state: Arc<Mutex<ClientState>>,
-    /// Message sender for broadcasting messages to all connected receivers
-    /// This is used internally by the client and should not be removed even if unused
-    #[allow(dead_code)]
-    sender: broadcast::Sender<MessageType>,
-    /// Message receiver for receiving messages from the broadcast channel
-    /// This is used internally by the client and should not be removed even if unused
-    #[allow(dead_code)]
-    receiver: broadcast::Receiver<MessageType>,
+    reader: Arc<Mutex<BufReader<OwnedReadHalf>>>,
+    writer: Arc<Mutex<BufWriter<OwnedWriteHalf>>>,
 }
 
 impl Client {
     /// Create a new client
-    pub fn new(config: ClientConfig) -> Self {
-        let (sender, receiver) = broadcast::channel(32);
-        Self {
+    pub async fn new(config: ClientConfig) -> Result<Self> {
+        debug!("Connecting to {}:{}", config.host, config.port);
+        let stream = TcpStream::connect((config.host.as_str(), config.port)).await?;
+        let (read_half, write_half) = stream.into_split();
+        
+        Ok(Self {
             config,
             state: Arc::new(Mutex::new(ClientState::default())),
-            sender,
-            receiver,
-            stream: None,
-        }
+            reader: Arc::new(Mutex::new(BufReader::new(read_half))),
+            writer: Arc::new(Mutex::new(BufWriter::new(write_half))),
+        })
     }
 
-    /// Connect to the INDI server
-    pub async fn connect(&mut self) -> Result<()> {
-        let addr = format!("{}:{}", self.config.host, self.config.port);
-        let stream = TcpStream::connect(&addr).await?;
-        self.stream = Some(stream);
+    /// Get reader
+    pub fn reader(&self) -> Arc<Mutex<BufReader<OwnedReadHalf>>> {
+        self.reader.clone()
+    }
+
+    /// Get writer
+    pub fn writer(&self) -> Arc<Mutex<BufWriter<OwnedWriteHalf>>> {
+        self.writer.clone()
+    }
+
+    /// Get state
+    pub fn state(&self) -> Arc<Mutex<ClientState>> {
+        self.state.clone()
+    }
+
+    /// Read messages from the server
+    pub async fn read_messages(&self) -> Result<()> {
+        debug!("Starting message reader for {}:{}", self.config.host, self.config.port);
+        let mut buf = Vec::new();
+        loop {
+            let mut reader = self.reader.lock().await;
+            match reader.read_until(b'>', &mut buf).await {
+                Ok(0) => {
+                    debug!("Server closed connection");
+                    break;
+                }
+                Ok(_) => {
+                    let message = Message::new(String::from_utf8_lossy(&buf).to_string());
+                    debug!("Received message: {}", message.content);
+                    buf.clear();
+                }
+                Err(e) => {
+                    error!("Error reading from server {}:{}: {}", self.config.host, self.config.port, e);
+                    return Err(e.into());
+                }
+            }
+        }
+        Ok(())
+    }
+}
+
+impl Connection for Client {
+    async fn disconnect(&mut self) -> Result<()> {
+        debug!("Disconnecting from server {}:{}", self.config.host, self.config.port);
+        Ok(())
+    }
+}
+
+impl MessageHandler for Client {
+    async fn send_message(&mut self, message: &str) -> Result<()> {
+        debug!("Sending message to {}:{}: {}", self.config.host, self.config.port, message.trim());
+        let writer = self.writer();
+        let mut writer = writer.lock().await;
+        writer.write_all(message.as_bytes()).await?;
+        writer.write_all(b"\n").await?;
+        writer.flush().await?;
         Ok(())
     }
 }

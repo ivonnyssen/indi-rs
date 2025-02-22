@@ -20,6 +20,13 @@ pub struct Message {
     pub content: String,
 }
 
+impl Message {
+    /// Create a new message
+    pub fn new(content: String) -> Self {
+        Self { content }
+    }
+}
+
 /// INDI message type
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
