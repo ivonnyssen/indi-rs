@@ -1,0 +1,2047 @@
+.x~..x~.<defSwitchVector device="QHY CCD QHY5III290C-1ca" name="CONNECTION" label="Connection" group="Main Control" state="Ok" perm="rw" rule="OneOfMany" timeout="60" timestamp="2025-02-16T03:06:48">
+    <defSwitch name="CONNECT" label="Connect">
+On
+    </defSwitch>
+    <defSwitch name="DISCONNECT" label="Disconnect">
+Off
+    </defSwitch>
+</defSwitchVector>
+
+.x~..x~.<defTextVector device="QHY CCD QHY5III290C-1ca" name="DRIVER_INFO" label="Driver Info" group="General Info" state="Idle" perm="ro" timeout="60" timestamp="2025-02-16T03:06:48">
+    <defText name="DRIVER_NAME" label="Name">
+QHY CCD
+    </defText>
+    <defText name="DRIVER_EXEC" label="Exec">
+indi_qhy_ccd
+    </defText>
+    <defText name="DRIVER_VERSION" label="Version">
+2.8
+    </defText>
+    <defText name="DRIVER_INTERFACE" label="Interface">
+6
+    </defText>
+</defTextVector>
+
+.x~..x~.QHY CCD QHY5III290C-1ca'>Never</enableBLOB>
+
+.x~..x~.<defNumberVector device="QHY CCD QHY5III290C-1ca" name="POLLING_PERIOD" label="Polling" group="Options" state="Idle" perm="rw" timeout="0" timestamp="2025-02-16T03:06:48">
+    <defNumber name="PERIOD_MS" label="Period (ms)" format="%.f" min="10" max="600000" step="1000">
+1000
+    </defNumber>
+</defNumberVector>
+
+.x...x..<defSwitchVector device="QHY CCD QHY5III290C-1ca" name="DEBUG" label="Debug" group="Options" state="Idle" perm="rw" rule="OneOfMany" timeout="0" timestamp="2025-02-16T03:06:48">
+    <defSwitch name="ENABLE" label="Enable">
+Off
+    </defSwitch>
+    <defSwitch name="DISABLE" label="Disable">
+On
+    </defSwitch>
+</defSwitchVector>
+<defSwitchVector device="QHY CCD QHY5III290C-1ca" name="SIMULATION" label="Simulation" group="Options" state="Idle" perm="rw" rule="OneOfMany" timeout="0" timestamp="2025-02-16T03:06:48">
+    <defSwitch name="ENABLE" label="Enable">
+Off
+    </defSwitch>
+    <defSwitch name="DISABLE" label="Disable">
+On
+    </defSwitch>
+</defSwitchVector>
+<defSwitchVector device="QHY CCD QHY5III290C-1ca" name="CONFIG_PROCESS" label="Configuration" group="Options" state="Alert" perm="rw" rule="AtMostOne" timeout="0" timestamp="2025-02-16T03:06:48">
+    <defSwitch name="CONFIG_LOAD" label="Load">
+Off
+    </defSwitch>
+    <defSwitch name="CONFIG_SAVE" label="Save">
+Off
+    </defSwitch>
+    <defSwitch name="CONFIG_DEFAULT" label="Default">
+Off
+    </defSwitch>
+    <defSwitch name="CONFIG_PURGE" label="Purge">
+Off
+    </defSwitch>
+</defSwitchVector>
+<defTextVector device="QHY CCD QHY5III290C-1ca" name="ACTIVE_DEVICES" label="Snoop devices" group="Options" state="Ok" perm="rw" timeout="60" timestamp="2025-02-16T03:06:48">
+    <defText name="ACTIVE_TELESCOPE" label="Telescope"/>
+    <defText name="ACTIVE_ROTATOR" label="Rotator"/>
+    <defText name="ACTIVE_FOCUSER" label="Focuser"/>
+    <defText name="ACTIVE_FILTER" label="Filter"/>
+    <defText name="ACTIVE_SKYQUALITY" label="Sky Quality">
+SQM
+    </defText>
+</defTextVector>
+<defNumberVector device="QHY CCD QHY5III290C-1ca" name="CCD_EXPOSURE" label="Expose" group="Main Control" state="Ok" perm="rw" timeout="60" timestamp="2025-02-16T03:06:48">
+    <defNumber name="CCD_EXPOSURE_VALUE" label="Duration (s)" format="%5.2f" min="9.9999999999999995475e-07" max="3600" step="9.9999999999999995475e-07">
+0
+    </defNumber>
+</defNumberVector>
+<defSwitchVector device="QHY CCD QHY5III290C-1ca" name="CCD_ABORT_EXPOSURE" label="Abort" group="Main Control" state="Idle" perm="rw" rule="AtMostOne" timeout="60" timestamp="2025-02-16T03:06:48">
+    <defSwitch name="ABORT" label="Abort">
+Off
+    </defSwitch>
+</defSwitchVector>
+<defNumberVector device="QHY CCD QHY5III290C-1ca" name="CCD_FRAME" label="Frame" group="Image Settings" state="Idle" perm="rw" timeout="60" timestamp="2025-02-16T03:06:48">
+    <defNumber name="X" label="Left " format="%4.0f" min="0" max="1919" step="0">
+0
+    </defNumber>
+    <defNumber name="Y" label="Top" format="%4.0f" min="0" max="1079" step="0">
+0
+    </defNumber>
+    <defNumber name="WIDTH" label="Width" format="%4.0f" min="1" max="1920" step="0">
+1920
+    </defNumber>
+    <defNumber name="HEIGHT" label="Height" format="%4.0f" min="1" max="1080" step="0">
+1080
+    </defNumber>
+</defNumberVector>
+<defSwitchVector device="QHY CCD QHY5III290C-1ca" name="CCD_FRAME_RESET" label="Frame Values" group="Image Settings" state="Idle" perm="wo" rule="OneOfMany" timeout="0" timestamp="2025-02-16T03:06:48">
+    <defSwitch name="RESET" label="Reset">
+Off
+    </defSwitch>
+</defSwitchVector>
+<defNumberVector device="QHY CCD QHY5III290C-1ca" name="CCD_BINNING" label="Binning" group="Image Settings" state="Idle" perm="rw" timeout="60" timestamp="2025-02-16T03:06:48">
+    <defNumber name="HOR_BIN" label="X" format="%2.0f" min="1" max="4" step="1">
+1
+    </defNumber>
+    <defNumber name="VER_BIN" label="Y" format="%2.0f" min="1" max="4" step="1">
+1
+    </defNumber>
+</defNumberVector>
+<defTextVector device="QHY CCD QHY5III290C-1ca" name="FITS_HEADER" label="FITS Header" group="General Info" state="Ok" perm="wo" timeout="60" timestamp="2025-02-16T03:06:48">
+    <defText name="KEYWORD_NAME" label="Name">
+TELESCOP
+    </defText>
+    <defText name="KEYWORD_VALUE" label="Value">
+Sample Guide 300@F/6.0
+    </defText>
+    <defText name="KEYWORD_COMMENT" label="Comment">
+Telescope
+    </defText>
+</defTextVector>
+<defSwitchVector device="QHY CCD QHY5III290C-1ca" name="CCD_CAPTURE_FORMAT" label="Format" group="Image Settings" state="Ok" perm="rw" rule="OneOfMany" timeout="60" timestamp="2025-02-16T03:06:48">
+    <defSwitch name="INDI_RAW" label="RAW">
+On
+    </defSwitch>
+</defSwitchVector>
+<defSwitchVector device="QHY CCD QHY5III290C-1ca" name="CCD_TRANSFER_FORMAT" label="Encode" group="Image Settings" state="Idle" perm="rw" rule="OneOfMany" timeout="60" timestamp="2025-02-16T03:06:48">
+    <defSwitch name="FORMAT_FITS" label="FITS">
+On
+    </defSwitch>
+    <defSwitch name="FORMAT_NATIVE" label="Native">
+Off
+    </defSwitch>
+    <defSwitch name="FORMAT_XISF" label="XISF">
+Off
+    </defSwitch>
+</defSwitchVector>
+<defNumberVector device="QHY CCD QHY5III290C-1ca" name="CCD_INFO" label="CCD Information" group="Image Info" state="Idle" perm="ro" timeout="60" timestamp="2025-02-16T03:06:48">
+    <defNumber name="CCD_MAX_X" label="Max. Width" format="%.f" min="1" max="16000" step="0">
+1920
+    </defNumber>
+    <defNumber name="CCD_MAX_Y" label="Max. Height" format="%.f" min="1" max="16000" step="0">
+1080
+    </defNumber>
+    <defNumber name="CCD_PIXEL_SIZE" label="Pixel size (um)" format="%.2f" min="1" max="40" step="0">
+2.9000000953674316406
+    </defNumber>
+    <defNumber name="CCD_PIXEL_SIZE_X" label="Pixel size X" format="%.2f" min="1" max="40" step="0">
+2.9000000953674316406
+    </defNumber>
+    <defNumber name="CCD_PIXEL_SIZE_Y" label="Pixel size Y" format="%.2f" min="1" max="40" step="0">
+2.9000000953674316406
+    </defNumber>
+    <defNumber name="CCD_BITSPERPIXEL" label="Bits per pixel" format="%.f" min="8" max="64" step="0">
+16
+    </defNumber>
+</defNumberVector>
+<defSwitchVector device="QHY CCD QHY5III290C-1ca" name="CCD_COMPRESSION" label="Compression" group="Image Settings" state="Idle" perm="rw" rule="OneOfMany" timeout="60" timestamp="2025-02-16T03:06:48">
+    <defSwitch name="INDI_ENABLED" label="Enabled">
+Off
+    </defSwitch>
+    <defSwitch name="INDI_DISABLED" label="Disabled">
+On
+    </defSwitch>
+</defSwitchVector>
+<defBLOBVector device="QHY CCD QHY5III290C-1ca" name="CCD1" label="Image Data" group="Image Info" state="Ok" perm="ro" timeout="60" timestamp="2025-02-16T03:06:48">
+    <defBLOB name="CCD1" label="Image"/>
+</defBLOBVector>
+<defNumberVector device="QHY CCD QHY5III290C-1ca" name="TELESCOPE_TIMED_GUIDE_NS" label="Guide N/S" group="Guider Control" state="Idle" perm="rw" timeout="60" timestamp="2025-02-16T03:06:48">
+    <defNumber name="TIMED_GUIDE_N" label="North (ms)" format="%.f" min="0" max="60000" step="100">
+0
+    </defNumber>
+    <defNumber name="TIMED_GUIDE_S" label="South (ms)" format="%.f" min="0" max="60000" step="100">
+0
+    </defNumber>
+</defNumberVector>
+<defNumberVector device="QHY CCD QHY5III290C-1ca" name="TELESCOPE_TIMED_GUIDE_WE" label="Guide E/W" group="Guider Control" state="Idle" perm="rw" timeout="60" timestamp="2025-02-16T03:06:48">
+    <defNumber name="TIMED_GUIDE_W" label="West (ms)" format="%.f" min="0" max="60000" step="100">
+0
+    </defNumber>
+    <defNumber name="TIMED_GUIDE_E" label="East (ms)" format="%.f" min="0" max="60000" step="100">
+0
+    </defNumber>
+</defNumberVector>
+<defSwitchVector device="QHY CCD QHY5III290C-1ca" name="CCD_FRAME_TYPE" label="Type" group="Image Settings" state="Idle" perm="rw" rule="OneOfMany" timeout="60" timestamp="2025-02-16T03:06:48">
+    <defSwitch name="FRAME_LIGHT" label="Light">
+On
+    </defSwitch>
+    <defSwitch name="FRAME_BIAS" label="Bias">
+Off
+    </defSwitch>
+    <defSwitch name="FRAME_DARK" label="Dark">
+Off
+    </defSwitch>
+    <defSwitch name="FRAME_FLAT" label="Flat">
+Off
+    </defSwitch>
+</defSwitchVector>
+<defTextVector device="QHY CCD QHY5III290C-1ca" name="CCD_CFA" label="Bayer Info" group="Image Info" state="Idle" perm="rw" timeout="60" timestamp="2025-02-16T03:06:48">
+    <defText name="CFA_OFFSET_X" label="X Offset">
+0
+    </defText>
+    <defText name="CFA_OFFSET_Y" label="Y Offset">
+0
+    </defText>
+    <defText name="CFA_TYPE" label="Filter">
+GBRG
+    </defText>
+</defTextVector>
+<defNumberVector device="QHY CCD QHY5III290C-1ca" name="SCOPE_INFO" label="Scope" group="Options" state="Ok" perm="rw" timeout="60" timestamp="2025-02-16T03:06:48">
+    <defNumber name="FOCAL_LENGTH" label="Focal Length (mm)" format="%g" min="0" max="10000" step="1">
+300
+    </defNumber>
+    <defNumber name="APERTURE" label="Aperture (mm)" format="%g" min="0" max="3000" step="1">
+50
+    </defNumber>
+</defNumberVector>
+<defSwitchVector device="QHY CCD QHY5III290C-1ca" name="WCS_CONTROL" label="WCS" group="WCS" state="Ok" perm="rw" rule="OneOfMany" timeout="0" timestamp="2025-02-16T03:06:48">
+    <defSwitch name="WCS_ENABLE" label="Enable">
+On
+    </defSwitch>
+    <defSwitch name="WCS_DISABLE" label="Disable">
+Off
+    </defSwitch>
+</defSwitchVector>
+<defSwitchVector device="QHY CCD QHY5III290C-1ca" name="UPLOAD_MODE" label="Upload" group="Options" state="Idle" perm="rw" rule="OneOfMany" timeout="0" timestamp="2025-02-16T03:06:48">
+    <defSwitch name="UPLOAD_CLIENT" label="Client">
+On
+    </defSwitch>
+    <defSwitch name="UPLOAD_LOCAL" label="Local">
+Off
+    </defSwitch>
+    <defSwitch name="UPLOAD_BOTH" label="Both">
+Off
+    </defSwitch>
+</defSwitchVector>
+<defTextVector device="QHY CCD QHY5III290C-1ca" name="UPLOAD_SETTINGS" label="Upload Settings" group="Options" state="Idle" perm="rw" timeout="60" timestamp="2025-02-16T03:06:48">
+    <defText name="UPLOAD_DIR" label="Dir"/>
+    <defText name="UPLOAD_PREFIX" label="Prefix">
+IMAGE_XXX
+    </defText>
+</defTextVector>
+<defSwitchVector device="QHY CCD QHY5III290C-1ca" name="CCD_FAST_TOGGLE" label="Fast Exposure" group="Options" state="Idle" perm="rw" rule="OneOfMany" timeout="0" timestamp="2025-02-16T03:06:48">
+    <defSwitch name="INDI_ENABLED" label="Enabled">
+Off
+    </defSwitch>
+    <defSwitch name="INDI_DISABLED" label="Disabled">
+On
+    </defSwitch>
+</defSwitchVector>
+<defNumberVector device="QHY CCD QHY5III290C-1ca" name="CCD_FAST_COUNT" label="Fast Count" group="Options" state="Idle" perm="rw" timeout="0" timestamp="2025-02-16T03:06:48">
+    <defNumber name="FRAMES" label="Frames" format="%.f" min="0" max="100000" step="1">
+1
+    </defNumber>
+</defNumberVector>
+<defSwitchVector device="QHY CCD QHY5III290C-1ca" name="CCD_VIDEO_STREAM" label="Video Stream" group="Streaming" state="Idle" perm="rw" rule="OneOfMany" timeout="0" timestamp="2025-02-16T03:06:48">
+    <defSwitch name="STREAM_ON" label="Stream On">
+Off
+    </defSwitch>
+    <defSwitch name="STREAM_OFF" label="Stream Off">
+On
+    </defSwitch>
+</defSwitchVector>
+<defNumberVector device="QHY CCD QHY5III290C-1ca" name="STREAM_DELAY" label="Video Stream Delay" group="Streaming" state="Idle" perm="ro" timeout="0" timestamp="2025-02-16T03:06:48">
+    <defNumber name="STREAM_DELAY_TIME" label="Delay (s)" format="%.3f" min="0" max="60" step="0.0010000000000000000208">
+0
+    </defNumber>
+</defNumberVector>
+<defNumberVector device="QHY CCD QHY5III290C-1ca" name="STREAMING_EXPOSURE" label="Expose" group="Streaming" state="Idle" perm="rw" timeout="60" timestamp="2025-02-16T03:06:48">
+    <defNumber name="STREAMING_EXPOSURE_VALUE" label="Duration (s)" format="%.6f" min="9.9999999999999995475e-07" max="60" step="0.10000000000000000555">
+0.10000000000000000555
+    </defNumber>
+    <defNumber name="STREAMING_DIVISOR_VALUE" label="Divisor" format="%.f" min="1" max="15" step="1">
+1
+    </defNumber>
+</defNumberVector>
+<defNumberVector device="QHY CCD QHY5III290C-1ca" name="FPS" label="FPS" group="Streaming" state="Idle" perm="ro" timeout="60" timestamp="2025-02-16T03:06:48">
+    <defNumber name="EST_FPS" label="Instant." format="%.2f" min="0" max="999" step="0">
+30
+    </defNumber>
+    <defNumber name="AVG_FPS" label="Average (1 sec.)" format="%.2f" min="0" max="999" step="0">
+30
+    </defNumber>
+</defNumberVector>
+<defSwitchVector device="QHY CCD QHY5III290C-1ca" name="RECORD_STREAM" label="Video Record" group="Streaming" state="Idle" perm="rw" rule="OneOfMany" timeout="0" timestamp="2025-02-16T03:06:48">
+    <defSwitch name="RECORD_ON" label="Record On">
+Off
+    </defSwitch>
+    <defSwitch name="RECORD_DURATION_ON" label="Record (Duration)">
+Off
+    </defSwitch>
+    <defSwitch name="RECORD_FRAME_ON" label="Record (Frames)">
+Off
+    </defSwitch>
+    <defSwitch name="RECORD_OFF" label="Record Off">
+On
+    </defSwitch>
+</defSwitchVector>
+<defTextVector device="QHY CCD QHY5III290C-1ca" name="RECORD_FILE" label="Record File" group="Streaming" state="Idle" perm="rw" timeout="0" timestamp="2025-02-16T03:06:48">
+    <defText name="RECORD_FILE_DIR" label="Dir.">
+/home/innyssen/Videos/indi__D_
+    </defText>
+    <defText name="RECORD_FILE_NAME" label="Name">
+indi_record__T_
+    </defText>
+</defTextVector>
+<defNumberVector device="QHY CCD QHY5III290C-1ca" name="RECORD_OPTIONS" label="Record Options" group="Streaming" state="Idle" perm="rw" timeout="60" timestamp="2025-02-16T03:06:48">
+    <defNumber name="RECORD_DURATION" label="Duration (sec)" format="%.3f" min="0.0010000000000000000208" max="999999" step="0">
+1
+    </defNumber>
+    <defNumber name="RECORD_FRAME_TOTAL" label="Frames" format="%.f" min="1" max="999999999" step="1">
+30
+    </defNumber>
+</defNumberVector>
+<defNumberVector device="QHY CCD QHY5III290C-1ca" name="CCD_STREAM_FRAME" label="Frame" group="Streaming" state="Ok" perm="rw" timeout="60" timestamp="2025-02-16T03:06:48">
+    <defNumber name="X" label="Left" format="%.f" min="0" max="1919" step="0">
+0
+    </defNumber>
+    <defNumber name="Y" label="Top" format="%.f" min="0" max="1079" step="0">
+0
+    </defNumber>
+    <defNumber name="WIDTH" label="Width" format="%.f" min="10" max="1920" step="0">
+1920
+    </defNumber>
+    <defNumber name="HEIGHT" label="Height" format="%.f" min="10" max="1080" step="0">
+1080
+    </defNumber>
+</defNumberVector>
+<defSwitchVector device="QHY CCD QHY5III290C-1ca" name="CCD_STREAM_ENCODER" label="Encoder" group="Streaming" state="Idle" perm="rw" rule="OneOfMany" timeout="0" timestamp="2025-02-16T03:06:48">
+    <defSwitch name="RAW" label="RAW">
+On
+    </defSwitch>
+    <defSwitch name="MJPEG" label="MJPEG">
+Off
+    </defSwitch>
+</defSwitchVector>
+<defSwitchVector device="QHY CCD QHY5III290C-1ca" name="CCD_STREAM_RECORDER" label="Recorder" group="Streaming" state="Idle" perm="rw" rule="OneOfMany" timeout="0" timestamp="2025-02-16T03:06:48">
+    <defSwitch name="SER" label="SER">
+On
+    </defSwitch>
+</defSwitchVector>
+<defNumberVector device="QHY CCD QHY5III290C-1ca" name="LIMITS" label="Limits" group="Streaming" state="Idle" perm="rw" timeout="0" timestamp="2025-02-16T03:06:48">
+    <defNumber name="LIMITS_BUFFER_MAX" label="Maximum Buffer Size (MB)" format="%.0f" min="1" max="65536" step="1">
+512
+    </defNumber>
+    <defNumber name="LIMITS_PREVIEW_FPS" label="Maximum Preview FPS" format="%.0f" min="1" max="120" step="1">
+10
+    </defNumber>
+</defNumberVector>
+<defNumberVector device="QHY CCD QHY5III290C-1ca" name="CCD_GAIN" label="Gain" group="Main Control" state="Idle" perm="rw" timeout="60" timestamp="2025-02-16T03:06:48">
+    <defNumber name="GAIN" label="Gain" format="%.f" min="0" max="729" step="3">
+30
+    </defNumber>
+</defNumberVector>
+<defNumberVector device="QHY CCD QHY5III290C-1ca" name="CCD_OFFSET" label="Offset" group="Main Control" state="Idle" perm="rw" timeout="60" timestamp="2025-02-16T03:06:48">
+    <defNumber name="OFFSET" label="Offset" format="%.f" min="0" max="511" step="1">
+0
+    </defNumber>
+</defNumberVector>
+<defNumberVector device="QHY CCD QHY5III290C-1ca" name="USB_TRAFFIC" label="USB Traffic" group="Main Control" state="Idle" perm="rw" timeout="60" timestamp="2025-02-16T03:06:48">
+    <defNumber name="TRAFFIC" label="Speed" format="%.f" min="0" max="60" step="3">
+40
+    </defNumber>
+</defNumberVector>
+<defNumberVector device="QHY CCD QHY5III290C-1ca" name="USB_BUFFER" label="USB Buffer" group="Main Control" state="Idle" perm="rw" timeout="60" timestamp="2025-02-16T03:06:48">
+    <defNumber name="BUFFER" label="Bytes" format="%.f" min="512" max="4096" step="512">
+512
+    </defNumber>
+</defNumberVector>
+<defTextVector device="QHY CCD QHY5III290C-1ca" name="SDK_VERSION" label="SDK" group="General Info" state="Ok" perm="ro" timeout="60" timestamp="2025-02-16T03:06:48">
+    <defText name="VERSION" label="Version">
+25.1.19
+    </defText>
+</defTextVector>
+<defSwitchVector device="QHY CCD QHY5III290C-1ca" name="CCD_AMP_GLOW" label="Amp Glow" group="Main Control" state="Idle" perm="rw" rule="OneOfMany" timeout="0" timestamp="2025-02-16T03:06:48">
+    <defSwitch name="AMP_AUTO" label="Auto">
+On
+    </defSwitch>
+    <defSwitch name="AMP_ON" label="On">
+Off
+    </defSwitch>
+    <defSwitch name="AMP_OFF" label="Off">
+Off
+    </defSwitch>
+</defSwitchVector>
+<defNumberVector device="QHY CCD QHY5III290C-1ca" name="CCD_ROTATION" label="CCD FOV" group="WCS" state="Idle" perm="rw" timeout="60" timestamp="2025-02-16T03:06:48">
+    <defNumber name="CCD_ROTATION_VALUE" label="Rotation" format="%g" min="-360" max="360" step="1">
+0
+    </defNumber>
+</defNumberVector>
+<defTextVector device="QHY CCD QHY5III290C-1ca" name="ACTIVE_DEVICES" label="Snoop devices" group="Options" state="Ok" perm="rw" timeout="60" timestamp="2025-02-16T03:06:48">
+    <defText name="ACTIVE_TELESCOPE" label="Telescope"/>
+    <defText name="ACTIVE_ROTATOR" label="Rotator"/>
+    <defText name="ACTIVE_FOCUSER" label="Focuser"/>
+    <defText name="ACTIVE_FILTER" label="Filter"/>
+    <defText name="ACTIVE_SKYQUALITY" label="Sky Quality">
+SQM
+    </defText>
+</defTextVector>
+<defSwitchVector device="QHY CCD QHY5III290C-1ca" name="CCD_VIDEO_STREAM" label="Video Stream" group="Streaming" state="Idle" perm="rw" rule="OneOfMany" timeout="0" timestamp="2025-02-16T03:06:48">
+    <defSwitch name="STREAM_ON" label="Stream On">
+Off
+    </defSwitch>
+    <defSwitch name="STREAM_OFF" label="Stream Off">
+On
+    </defSwitch>
+</defSwitchVector>
+<defNumberVector device="QHY CCD QHY5III290C-1ca" name="STREAMING_EXPOSURE" label="Expose" group="Streaming" state="Idle" perm="rw" timeout="60" timestamp="2025-02-16T03:06:48">
+    <defNumber name="STREAMING_EXPOSURE_VALUE" label="Duration (s)" format="%.6f" min="9.9999999999999995475e-07" max="60" step="0.10000000000000000555">
+0.10000000000000000555
+    </defNumber>
+    <defNumber name="STREAMING_DIVISOR_VALUE" label="Divisor" format="%.f" min="1" max="15" step="1">
+1
+    </defNumber>
+</defNumberVector>
+<defNumberVector device="QHY CCD QHY5III290C-1ca" name="FPS" label="FPS" group="Streaming" state="Idle" perm="ro" timeout="60" timestamp="2025-02-16T03:06:48">
+    <defNumber name="EST_FPS" label="Instant." format="%.2f" min="0" max="999" step="0">
+30
+    </defNumber>
+    <defNumber name="AVG_FPS" label="Average (1 sec.)" format="%.2f" min="0" max="999" step="0">
+30
+    </defNumber>
+</defNumberVector>
+<defSwitchVector device="QHY CCD QHY5III290C-1ca" name="RECORD_STREAM" label="Video Record" group="Streaming" state="Idle" perm="rw" rule="OneOfMany" timeout="0" timestamp="2025-02-16T03:06:48">
+    <defSwitch name="RECORD_ON" label="Record On">
+Off
+    </defSwitch>
+    <defSwitch name="RECORD_DURATION_ON" label="Record (Duration)">
+Off
+    </defSwitch>
+    <defSwitch name="RECORD_FRAME_ON" label="Record (Frames)">
+Off
+    </defSwitch>
+    <defSwitch name="RECORD_OFF" label="Record Off">
+On
+    </defSwitch>
+</defSwitchVector>
+<defTextVector device="QHY CCD QHY5III290C-1ca" name="RECORD_FILE" label="Record File" group="Streaming" state="Idle" perm="rw" timeout="0" timestamp="2025-02-16T03:06:48">
+    <defText name="RECORD_FILE_DIR" label="Dir.">
+/home/innyssen/Videos/indi__D_
+    </defText>
+    <defText name="RECORD_FILE_NAME" label="Name">
+indi_record__T_
+    </defText>
+</defTextVector>
+<defNumberVector device="QHY CCD QHY5III290C-1ca" name="RECORD_OPTIONS" label="Record Options" group="Streaming" state="Idle" perm="rw" timeout="60" timestamp="2025-02-16T03:06:48">
+    <defNumber name="RECORD_DURATION" label="Duration (sec)" format="%.3f" min="0.0010000000000000000208" max="999999" step="0">
+1
+    </defNumber>
+    <defNumber name="RECORD_FRAME_TOTAL" label="Frames" format="%.f" min="1" max="999999999" step="1">
+30
+    </defNumber>
+</defNumberVector>
+<defNumberVector device="QHY CCD QHY5III290C-1ca" name="CCD_STREAM_FRAME" label="Frame" group="Streaming" state="Ok" perm="rw" timeout="60" timestamp="2025-02-16T03:06:48">
+    <defNumber name="X" label="Left" format="%.f" min="0" max="1919" step="0">
+0
+    </defNumber>
+    <defNumber name="Y" label="Top" format="%.f" min="0" max="1079" step="0">
+0
+    </defNumber>
+    <defNumber name="WIDTH" label="Width" format="%.f" min="10" max="1920" step="0">
+1920
+    </defNumber>
+    <defNumber name="HEIGHT" label="Height" format="%.f" min="10" max="1080" step="0">
+1080
+    </defNumber>
+</defNumberVector>
+<defSwitchVector device="QHY CCD QHY5III290C-1ca" name="CCD_STREAM_ENCODER" label="Encoder" group="Streaming" state="Idle" perm="rw" rule="OneOfMany" timeout="0" timestamp="2025-02-16T03:06:48">
+    <defSwitch name="RAW" label="RAW">
+On
+    </defSwitch>
+    <defSwitch name="MJPEG" label="MJPEG">
+Off
+    </defSwitch>
+</defSwitchVector>
+<defSwitchVector device="QHY CCD QHY5III290C-1ca" name="CCD_STREAM_RECORDER" label="Recorder" group="Streaming" state="Idle" perm="rw" rule="OneOfMany" timeout="0" timestamp="2025-02-16T03:06:48">
+    <defSwitch name="SER" label="SER">
+On
+    </defSwitch>
+</defSwitchVector>
+<defNumberVector device="QHY CCD QHY5III290C-1ca" name="LIMITS" label="Limits" group="Streaming" state="Idle" perm="rw" timeout="0" timestamp="2025-02-16T03:06:48">
+    <defNumber name="LIMITS_BUFFER_MAX" label="Maximum Buffer Size (MB)" format="%.0f" min="1" max="65536" step="1">
+512
+    </defNumber>
+    <defNumber name="LIMITS_PREVIEW_FPS" label="Maximum Preview FPS" format="%.0f" min="1" max="120" step="1">
+10
+    </defNumber>
+</defNumberVector>
+<defNumberVector device="QHY CCD QHY5III290C-1ca" name="CCD_GAIN" label="Gain" group="Main Control" state="Idle" perm="rw" timeout="60" timestamp="2025-02-16T03:06:48">
+    <defNumber name="GAIN" label="Gain" format="%.f" min="0" max="729" step="3">
+30
+    </defNumber>
+</defNumberVector>
+<defNumberVector device="QHY CCD QHY5III290C-1ca" name="CCD_OFFSET" label="Offset" group="Main Control" state="Idle" perm="rw" timeout="60" timestamp="2025-02-16T03:06:48">
+    <defNumber name="OFFSET" label="Offset" format="%.f" min="0" max="511" step="1">
+0
+    </defNumber>
+</defNumberVector>
+<defNumberVector device="QHY CCD QHY5III290C-1ca" name="USB_TRAFFIC" label="USB Traffic" group="Main Control" state="Idle" perm="rw" timeout="60" timestamp="2025-02-16T03:06:48">
+    <defNumber name="TRAFFIC" label="Speed" format="%.f" min="0" max="60" step="3">
+40
+    </defNumber>
+</defNumberVector>
+<defNumberVector device="QHY CCD QHY5III290C-1ca" name="USB_BUFFER" label="USB Buffer" group="Main Control" state="Idle" perm="rw" timeout="60" timestamp="2025-02-16T03:06:48">
+    <defNumber name="BUFFER" label="Bytes" format="%.f" min="512" max="4096" step="512">
+512
+    </defNumber>
+</defNumberVector>
+<defTextVector device="QHY CCD QHY5III290C-1ca" name="SDK_VERSION" label="SDK" group="General Info" state="Ok" perm="ro" timeout="60" timestamp="2025-02-16T03:06:48">
+    <defText name="VERSION" label="Version">
+25.1.19
+    </defText>
+</defTextVector>
+<defSwitchVector device="QHY CCD QHY5III290C-1ca" name="CCD_AMP_GLOW" label="Amp Glow" group="Main Control" state="Idle" perm="rw" rule="OneOfMany" timeout="0" timestamp="2025-02-16T03:06:48">
+    <defSwitch name="AMP_AUTO" label="Auto">
+On
+    </defSwitch>
+    <defSwitch name="AMP_ON" label="On">
+Off
+    </defSwitch>
+    <defSwitch name="AMP_OFF" label="Off">
+Off
+    </defSwitch>
+</defSwitchVector>
+
+.x...x..<defSwitchVector device="QHY CCD QHY5III290C-1ca" name="CONNECTION" label="Connection" group="Main Control" state="Ok" perm="rw" rule="OneOfMany" timeout="60" timestamp="2025-02-16T03:06:49">
+    <defSwitch name="CONNECT" label="Connect">
+On
+    </defSwitch>
+    <defSwitch name="DISCONNECT" label="Disconnect">
+Off
+    </defSwitch>
+</defSwitchVector>
+
+.x...x..<defSwitchVector device="QHY CCD QHY5III290C-1ca" name="CONNECTION" label="Connection" group="Main Control" state="Ok" perm="rw" rule="OneOfMany" timeout="60" timestamp="2025-02-16T03:06:49">
+    <defSwitch name="CONNECT" label="Connect">
+On
+    </defSwitch>
+    <defSwitch name="DISCONNECT" label="Disconnect">
+Off
+    </defSwitch>
+</defSwitchVector>
+
+.x...x..<defTextVector device="QHY CCD QHY5III290C-1ca" name="DRIVER_INFO" label="Driver Info" group="General Info" state="Idle" perm="ro" timeout="60" timestamp="2025-02-16T03:06:49">
+    <defText name="DRIVER_NAME" label="Name">
+QHY CCD
+    </defText>
+    <defText name="DRIVER_EXEC" label="Exec">
+indi_qhy_ccd
+    </defText>
+    <defText name="DRIVER_VERSION" label="Version">
+2.8
+    </defText>
+    <defText name="DRIVER_INTERFACE" label="Interface">
+6
+    </defText>
+</defTextVector>
+
+.x...x..<defTextVector device="QHY CCD QHY5III290C-1ca" name="DRIVER_INFO" label="Driver Info" group="General Info" state="Idle" perm="ro" timeout="60" timestamp="2025-02-16T03:06:49">
+    <defText name="DRIVER_NAME" label="Name">
+QHY CCD
+    </defText>
+    <defText name="DRIVER_EXEC" label="Exec">
+indi_qhy_ccd
+    </defText>
+    <defText name="DRIVER_VERSION" label="Version">
+2.8
+    </defText>
+    <defText name="DRIVER_INTERFACE" label="Interface">
+6
+    </defText>
+</defTextVector>
+
+.x...x..<defNumberVector device="QHY CCD QHY5III290C-1ca" name="POLLING_PERIOD" label="Polling" group="Options" state="Idle" perm="rw" timeout="0" timestamp="2025-02-16T03:06:49">
+    <defNumber name="PERIOD_MS" label="Period (ms)" format="%.f" min="10" max="600000" step="1000">
+1000
+    </defNumber>
+</defNumberVector>
+
+.x...x..<defSwitchVector device="QHY CCD QHY5III290C-1ca" name="DEBUG" label="Debug" group="Options" state="Idle" perm="rw" rule="OneOfMany" timeout="0" timestamp="2025-02-16T03:06:49">
+    <defSwitch name="ENABLE" label="Enable">
+Off
+    </defSwitch>
+    <defSwitch name="DISABLE" label="Disable">
+On
+    </defSwitch>
+</defSwitchVector>
+
+.x...x..<defSwitchVector device="QHY CCD QHY5III290C-1ca" name="SIMULATION" label="Simulation" group="Options" state="Idle" perm="rw" rule="OneOfMany" timeout="0" timestamp="2025-02-16T03:06:49">
+    <defSwitch name="ENABLE" label="Enable">
+Off
+    </defSwitch>
+    <defSwitch name="DISABLE" label="Disable">
+On
+    </defSwitch>
+</defSwitchVector>
+
+.x...x..<defSwitchVector device="QHY CCD QHY5III290C-1ca" name="CONFIG_PROCESS" label="Configuration" group="Options" state="Alert" perm="rw" rule="AtMostOne" timeout="0" timestamp="2025-02-16T03:06:49">
+    <defSwitch name="CONFIG_LOAD" label="Load">
+Off
+    </defSwitch>
+    <defSwitch name="CONFIG_SAVE" label="Save">
+Off
+    </defSwitch>
+    <defSwitch name="CONFIG_DEFAULT" label="Default">
+Off
+    </defSwitch>
+    <defSwitch name="CONFIG_PURGE" label="Purge">
+Off
+    </defSwitch>
+</defSwitchVector>
+
+.x...x..<defTextVector device="QHY CCD QHY5III290C-1ca" name="ACTIVE_DEVICES" label="Snoop devices" group="Options" state="Ok" perm="rw" timeout="60" timestamp="2025-02-16T03:06:49">
+    <defText name="ACTIVE_TELESCOPE" label="Telescope"/>
+    <defText name="ACTIVE_ROTATOR" label="Rotator"/>
+    <defText name="ACTIVE_FOCUSER" label="Focuser"/>
+    <defText name="ACTIVE_FILTER" label="Filter"/>
+    <defText name="ACTIVE_SKYQUALITY" label="Sky Quality">
+SQM
+    </defText>
+</defTextVector>
+
+.x...x..<defNumberVector device="QHY CCD QHY5III290C-1ca" name="CCD_EXPOSURE" label="Expose" group="Main Control" state="Ok" perm="rw" timeout="60" timestamp="2025-02-16T03:06:49">
+    <defNumber name="CCD_EXPOSURE_VALUE" label="Duration (s)" format="%5.2f" min="9.9999999999999995475e-07" max="3600" step="9.9999999999999995475e-07">
+0
+    </defNumber>
+</defNumberVector>
+
+.x...x..<defSwitchVector device="QHY CCD QHY5III290C-1ca" name="CCD_ABORT_EXPOSURE" label="Abort" group="Main Control" state="Idle" perm="rw" rule="AtMostOne" timeout="60" timestamp="2025-02-16T03:06:49">
+    <defSwitch name="ABORT" label="Abort">
+Off
+    </defSwitch>
+</defSwitchVector>
+
+.x...x..<defNumberVector device="QHY CCD QHY5III290C-1ca" name="CCD_FRAME" label="Frame" group="Image Settings" state="Idle" perm="rw" timeout="60" timestamp="2025-02-16T03:06:49">
+    <defNumber name="X" label="Left " format="%4.0f" min="0" max="1919" step="0">
+0
+    </defNumber>
+    <defNumber name="Y" label="Top" format="%4.0f" min="0" max="1079" step="0">
+0
+    </defNumber>
+    <defNumber name="WIDTH" label="Width" format="%4.0f" min="1" max="1920" step="0">
+1920
+    </defNumber>
+    <defNumber name="HEIGHT" label="Height" format="%4.0f" min="1" max="1080" step="0">
+1080
+    </defNumber>
+</defNumberVector>
+
+.x...x..<defSwitchVector device="QHY CCD QHY5III290C-1ca" name="CCD_FRAME_RESET" label="Frame Values" group="Image Settings" state="Idle" perm="wo" rule="OneOfMany" timeout="0" timestamp="2025-02-16T03:06:49">
+    <defSwitch name="RESET" label="Reset">
+Off
+    </defSwitch>
+</defSwitchVector>
+
+.x...x..<defNumberVector device="QHY CCD QHY5III290C-1ca" name="CCD_BINNING" label="Binning" group="Image Settings" state="Idle" perm="rw" timeout="60" timestamp="2025-02-16T03:06:49">
+    <defNumber name="HOR_BIN" label="X" format="%2.0f" min="1" max="4" step="1">
+1
+    </defNumber>
+    <defNumber name="VER_BIN" label="Y" format="%2.0f" min="1" max="4" step="1">
+1
+    </defNumber>
+</defNumberVector>
+
+.x...x..<defTextVector device="QHY CCD QHY5III290C-1ca" name="FITS_HEADER" label="FITS Header" group="General Info" state="Ok" perm="wo" timeout="60" timestamp="2025-02-16T03:06:49">
+    <defText name="KEYWORD_NAME" label="Name">
+TELESCOP
+    </defText>
+    <defText name="KEYWORD_VALUE" label="Value">
+Sample Guide 300@F/6.0
+    </defText>
+    <defText name="KEYWORD_COMMENT" label="Comment">
+Telescope
+    </defText>
+</defTextVector>
+
+.x...x..<defSwitchVector device="QHY CCD QHY5III290C-1ca" name="CCD_CAPTURE_FORMAT" label="Format" group="Image Settings" state="Ok" perm="rw" rule="OneOfMany" timeout="60" timestamp="2025-02-16T03:06:49">
+    <defSwitch name="INDI_RAW" label="RAW">
+On
+    </defSwitch>
+</defSwitchVector>
+
+.x...x..<defNumberVector device="QHY CCD QHY5III290C-1ca" name="POLLING_PERIOD" label="Polling" group="Options" state="Idle" perm="rw" timeout="0" timestamp="2025-02-16T03:06:49">
+    <defNumber name="PERIOD_MS" label="Period (ms)" format="%.f" min="10" max="600000" step="1000">
+1000
+    </defNumber>
+</defNumberVector>
+<defSwitchVector device="QHY CCD QHY5III290C-1ca" name="DEBUG" label="Debug" group="Options" state="Idle" perm="rw" rule="OneOfMany" timeout="0" timestamp="2025-02-16T03:06:49">
+    <defSwitch name="ENABLE" label="Enable">
+Off
+    </defSwitch>
+    <defSwitch name="DISABLE" label="Disable">
+On
+    </defSwitch>
+</defSwitchVector>
+<defSwitchVector device="QHY CCD QHY5III290C-1ca" name="SIMULATION" label="Simulation" group="Options" state="Idle" perm="rw" rule="OneOfMany" timeout="0" timestamp="2025-02-16T03:06:49">
+    <defSwitch name="ENABLE" label="Enable">
+Off
+    </defSwitch>
+    <defSwitch name="DISABLE" label="Disable">
+On
+    </defSwitch>
+</defSwitchVector>
+<defSwitchVector device="QHY CCD QHY5III290C-1ca" name="CONFIG_PROCESS" label="Configuration" group="Options" state="Alert" perm="rw" rule="AtMostOne" timeout="0" timestamp="2025-02-16T03:06:49">
+    <defSwitch name="CONFIG_LOAD" label="Load">
+Off
+    </defSwitch>
+    <defSwitch name="CONFIG_SAVE" label="Save">
+Off
+    </defSwitch>
+    <defSwitch name="CONFIG_DEFAULT" label="Default">
+Off
+    </defSwitch>
+    <defSwitch name="CONFIG_PURGE" label="Purge">
+Off
+    </defSwitch>
+</defSwitchVector>
+<defTextVector device="QHY CCD QHY5III290C-1ca" name="ACTIVE_DEVICES" label="Snoop devices" group="Options" state="Ok" perm="rw" timeout="60" timestamp="2025-02-16T03:06:49">
+    <defText name="ACTIVE_TELESCOPE" label="Telescope"/>
+    <defText name="ACTIVE_ROTATOR" label="Rotator"/>
+    <defText name="ACTIVE_FOCUSER" label="Focuser"/>
+    <defText name="ACTIVE_FILTER" label="Filter"/>
+    <defText name="ACTIVE_SKYQUALITY" label="Sky Quality">
+SQM
+    </defText>
+</defTextVector>
+<defNumberVector device="QHY CCD QHY5III290C-1ca" name="CCD_EXPOSURE" label="Expose" group="Main Control" state="Ok" perm="rw" timeout="60" timestamp="2025-02-16T03:06:49">
+    <defNumber name="CCD_EXPOSURE_VALUE" label="Duration (s)" format="%5.2f" min="9.9999999999999995475e-07" max="3600" step="9.9999999999999995475e-07">
+0
+    </defNumber>
+</defNumberVector>
+<defSwitchVector device="QHY CCD QHY5III290C-1ca" name="CCD_ABORT_EXPOSURE" label="Abort" group="Main Control" state="Idle" perm="rw" rule="AtMostOne" timeout="60" timestamp="2025-02-16T03:06:49">
+    <defSwitch name="ABORT" label="Abort">
+Off
+    </defSwitch>
+</defSwitchVector>
+<defNumberVector device="QHY CCD QHY5III290C-1ca" name="CCD_FRAME" label="Frame" group="Image Settings" state="Idle" perm="rw" timeout="60" timestamp="2025-02-16T03:06:49">
+    <defNumber name="X" label="Left " format="%4.0f" min="0" max="1919" step="0">
+0
+    </defNumber>
+    <defNumber name="Y" label="Top" format="%4.0f" min="0" max="1079" step="0">
+0
+    </defNumber>
+    <defNumber name="WIDTH" label="Width" format="%4.0f" min="1" max="1920" step="0">
+1920
+    </defNumber>
+    <defNumber name="HEIGHT" label="Height" format="%4.0f" min="1" max="1080" step="0">
+1080
+    </defNumber>
+</defNumberVector>
+<defSwitchVector device="QHY CCD QHY5III290C-1ca" name="CCD_FRAME_RESET" label="Frame Values" group="Image Settings" state="Idle" perm="wo" rule="OneOfMany" timeout="0" timestamp="2025-02-16T03:06:49">
+    <defSwitch name="RESET" label="Reset">
+Off
+    </defSwitch>
+</defSwitchVector>
+<defNumberVector device="QHY CCD QHY5III290C-1ca" name="CCD_BINNING" label="Binning" group="Image Settings" state="Idle" perm="rw" timeout="60" timestamp="2025-02-16T03:06:49">
+    <defNumber name="HOR_BIN" label="X" format="%2.0f" min="1" max="4" step="1">
+1
+    </defNumber>
+    <defNumber name="VER_BIN" label="Y" format="%2.0f" min="1" max="4" step="1">
+1
+    </defNumber>
+</defNumberVector>
+<defTextVector device="QHY CCD QHY5III290C-1ca" name="FITS_HEADER" label="FITS Header" group="General Info" state="Ok" perm="wo" timeout="60" timestamp="2025-02-16T03:06:49">
+    <defText name="KEYWORD_NAME" label="Name">
+TELESCOP
+    </defText>
+    <defText name="KEYWORD_VALUE" label="Value">
+Sample Guide 300@F/6.0
+    </defText>
+    <defText name="KEYWORD_COMMENT" label="Comment">
+Telescope
+    </defText>
+</defTextVector>
+<defSwitchVector device="QHY CCD QHY5III290C-1ca" name="CCD_CAPTURE_FORMAT" label="Format" group="Image Settings" state="Ok" perm="rw" rule="OneOfMany" timeout="60" timestamp="2025-02-16T03:06:49">
+    <defSwitch name="INDI_RAW" label="RAW">
+On
+    </defSwitch>
+</defSwitchVector>
+<defSwitchVector device="QHY CCD QHY5III290C-1ca" name="CCD_TRANSFER_FORMAT" label="Encode" group="Image Settings" state="Idle" perm="rw" rule="OneOfMany" timeout="60" timestamp="2025-02-16T03:06:49">
+    <defSwitch name="FORMAT_FITS" label="FITS">
+On
+    </defSwitch>
+    <defSwitch name="FORMAT_NATIVE" label="Native">
+Off
+    </defSwitch>
+    <defSwitch name="FORMAT_XISF" label="XISF">
+Off
+    </defSwitch>
+</defSwitchVector>
+<defNumberVector device="QHY CCD QHY5III290C-1ca" name="CCD_INFO" label="CCD Information" group="Image Info" state="Idle" perm="ro" timeout="60" timestamp="2025-02-16T03:06:49">
+    <defNumber name="CCD_MAX_X" label="Max. Width" format="%.f" min="1" max="16000" step="0">
+1920
+    </defNumber>
+    <defNumber name="CCD_MAX_Y" label="Max. Height" format="%.f" min="1" max="16000" step="0">
+1080
+    </defNumber>
+    <defNumber name="CCD_PIXEL_SIZE" label="Pixel size (um)" format="%.2f" min="1" max="40" step="0">
+2.9000000953674316406
+    </defNumber>
+    <defNumber name="CCD_PIXEL_SIZE_X" label="Pixel size X" format="%.2f" min="1" max="40" step="0">
+2.9000000953674316406
+    </defNumber>
+    <defNumber name="CCD_PIXEL_SIZE_Y" label="Pixel size Y" format="%.2f" min="1" max="40" step="0">
+2.9000000953674316406
+    </defNumber>
+    <defNumber name="CCD_BITSPERPIXEL" label="Bits per pixel" format="%.f" min="8" max="64" step="0">
+16
+    </defNumber>
+</defNumberVector>
+<defSwitchVector device="QHY CCD QHY5III290C-1ca" name="CCD_COMPRESSION" label="Compression" group="Image Settings" state="Idle" perm="rw" rule="OneOfMany" timeout="60" timestamp="2025-02-16T03:06:49">
+    <defSwitch name="INDI_ENABLED" label="Enabled">
+Off
+    </defSwitch>
+    <defSwitch name="INDI_DISABLED" label="Disabled">
+On
+    </defSwitch>
+</defSwitchVector>
+<defBLOBVector device="QHY CCD QHY5III290C-1ca" name="CCD1" label="Image Data" group="Image Info" state="Ok" perm="ro" timeout="60" timestamp="2025-02-16T03:06:49">
+    <defBLOB name="CCD1" label="Image"/>
+</defBLOBVector>
+<defNumberVector device="QHY CCD QHY5III290C-1ca" name="TELESCOPE_TIMED_GUIDE_NS" label="Guide N/S" group="Guider Control" state="Idle" perm="rw" timeout="60" timestamp="2025-02-16T03:06:49">
+    <defNumber name="TIMED_GUIDE_N" label="North (ms)" format="%.f" min="0" max="60000" step="100">
+0
+    </defNumber>
+    <defNumber name="TIMED_GUIDE_S" label="South (ms)" format="%.f" min="0" max="60000" step="100">
+0
+    </defNumber>
+</defNumberVector>
+
+.x...x..QHY CCD QHY5III290C-1ca' name='CCD1'>Only</enableBLOB>
+
+.x...x..<defNumberVector device="QHY CCD QHY5III290C-1ca" name="TELESCOPE_TIMED_GUIDE_WE" label="Guide E/W" group="Guider Control" state="Idle" perm="rw" timeout="60" timestamp="2025-02-16T03:06:49">
+    <defNumber name="TIMED_GUIDE_W" label="West (ms)" format="%.f" min="0" max="60000" step="100">
+0
+    </defNumber>
+    <defNumber name="TIMED_GUIDE_E" label="East (ms)" format="%.f" min="0" max="60000" step="100">
+0
+    </defNumber>
+</defNumberVector>
+
+.x...x..<defSwitchVector device="QHY CCD QHY5III290C-1ca" name="CCD_TRANSFER_FORMAT" label="Encode" group="Image Settings" state="Idle" perm="rw" rule="OneOfMany" timeout="60" timestamp="2025-02-16T03:06:49">
+    <defSwitch name="FORMAT_FITS" label="FITS">
+On
+    </defSwitch>
+    <defSwitch name="FORMAT_NATIVE" label="Native">
+Off
+    </defSwitch>
+    <defSwitch name="FORMAT_XISF" label="XISF">
+Off
+    </defSwitch>
+</defSwitchVector>
+<defNumberVector device="QHY CCD QHY5III290C-1ca" name="CCD_INFO" label="CCD Information" group="Image Info" state="Idle" perm="ro" timeout="60" timestamp="2025-02-16T03:06:49">
+    <defNumber name="CCD_MAX_X" label="Max. Width" format="%.f" min="1" max="16000" step="0">
+1920
+    </defNumber>
+    <defNumber name="CCD_MAX_Y" label="Max. Height" format="%.f" min="1" max="16000" step="0">
+1080
+    </defNumber>
+    <defNumber name="CCD_PIXEL_SIZE" label="Pixel size (um)" format="%.2f" min="1" max="40" step="0">
+2.9000000953674316406
+    </defNumber>
+    <defNumber name="CCD_PIXEL_SIZE_X" label="Pixel size X" format="%.2f" min="1" max="40" step="0">
+2.9000000953674316406
+    </defNumber>
+    <defNumber name="CCD_PIXEL_SIZE_Y" label="Pixel size Y" format="%.2f" min="1" max="40" step="0">
+2.9000000953674316406
+    </defNumber>
+    <defNumber name="CCD_BITSPERPIXEL" label="Bits per pixel" format="%.f" min="8" max="64" step="0">
+16
+    </defNumber>
+</defNumberVector>
+<defSwitchVector device="QHY CCD QHY5III290C-1ca" name="CCD_COMPRESSION" label="Compression" group="Image Settings" state="Idle" perm="rw" rule="OneOfMany" timeout="60" timestamp="2025-02-16T03:06:49">
+    <defSwitch name="INDI_ENABLED" label="Enabled">
+Off
+    </defSwitch>
+    <defSwitch name="INDI_DISABLED" label="Disabled">
+On
+    </defSwitch>
+</defSwitchVector>
+<defBLOBVector device="QHY CCD QHY5III290C-1ca" name="CCD1" label="Image Data" group="Image Info" state="Ok" perm="ro" timeout="60" timestamp="2025-02-16T03:06:49">
+    <defBLOB name="CCD1" label="Image"/>
+</defBLOBVector>
+<defNumberVector device="QHY CCD QHY5III290C-1ca" name="TELESCOPE_TIMED_GUIDE_NS" label="Guide N/S" group="Guider Control" state="Idle" perm="rw" timeout="60" timestamp="2025-02-16T03:06:49">
+    <defNumber name="TIMED_GUIDE_N" label="North (ms)" format="%.f" min="0" max="60000" step="100">
+0
+    </defNumber>
+    <defNumber name="TIMED_GUIDE_S" label="South (ms)" format="%.f" min="0" max="60000" step="100">
+0
+    </defNumber>
+</defNumberVector>
+<defNumberVector device="QHY CCD QHY5III290C-1ca" name="TELESCOPE_TIMED_GUIDE_WE" label="Guide E/W" group="Guider Control" state="Idle" perm="rw" timeout="60" timestamp="2025-02-16T03:06:49">
+    <defNumber name="TIMED_GUIDE_W" label="West (ms)" format="%.f" min="0" max="60000" step="100">
+0
+    </defNumber>
+    <defNumber name="TIMED_GUIDE_E" label="East (ms)" format="%.f" min="0" max="60000" step="100">
+0
+    </defNumber>
+</defNumberVector>
+<defSwitchVector device="QHY CCD QHY5III290C-1ca" name="CCD_FRAME_TYPE" label="Type" group="Image Settings" state="Idle" perm="rw" rule="OneOfMany" timeout="60" timestamp="2025-02-16T03:06:49">
+    <defSwitch name="FRAME_LIGHT" label="Light">
+On
+    </defSwitch>
+    <defSwitch name="FRAME_BIAS" label="Bias">
+Off
+    </defSwitch>
+    <defSwitch name="FRAME_DARK" label="Dark">
+Off
+    </defSwitch>
+    <defSwitch name="FRAME_FLAT" label="Flat">
+Off
+    </defSwitch>
+</defSwitchVector>
+<defTextVector device="QHY CCD QHY5III290C-1ca" name="CCD_CFA" label="Bayer Info" group="Image Info" state="Idle" perm="rw" timeout="60" timestamp="2025-02-16T03:06:49">
+    <defText name="CFA_OFFSET_X" label="X Offset">
+0
+    </defText>
+    <defText name="CFA_OFFSET_Y" label="Y Offset">
+0
+    </defText>
+    <defText name="CFA_TYPE" label="Filter">
+GBRG
+    </defText>
+</defTextVector>
+
+.x...x..<defSwitchVector device="QHY CCD QHY5III290C-1ca" name="CCD_FRAME_TYPE" label="Type" group="Image Settings" state="Idle" perm="rw" rule="OneOfMany" timeout="60" timestamp="2025-02-16T03:06:49">
+    <defSwitch name="FRAME_LIGHT" label="Light">
+On
+    </defSwitch>
+    <defSwitch name="FRAME_BIAS" label="Bias">
+Off
+    </defSwitch>
+    <defSwitch name="FRAME_DARK" label="Dark">
+Off
+    </defSwitch>
+    <defSwitch name="FRAME_FLAT" label="Flat">
+Off
+    </defSwitch>
+</defSwitchVector>
+<defTextVector device="QHY CCD QHY5III290C-1ca" name="CCD_CFA" label="Bayer Info" group="Image Info" state="Idle" perm="rw" timeout="60" timestamp="2025-02-16T03:06:49">
+    <defText name="CFA_OFFSET_X" label="X Offset">
+0
+    </defText>
+    <defText name="CFA_OFFSET_Y" label="Y Offset">
+0
+    </defText>
+    <defText name="CFA_TYPE" label="Filter">
+GBRG
+    </defText>
+</defTextVector>
+<defNumberVector device="QHY CCD QHY5III290C-1ca" name="SCOPE_INFO" label="Scope" group="Options" state="Ok" perm="rw" timeout="60" timestamp="2025-02-16T03:06:49">
+    <defNumber name="FOCAL_LENGTH" label="Focal Length (mm)" format="%g" min="0" max="10000" step="1">
+300
+    </defNumber>
+    <defNumber name="APERTURE" label="Aperture (mm)" format="%g" min="0" max="3000" step="1">
+50
+    </defNumber>
+</defNumberVector>
+<defSwitchVector device="QHY CCD QHY5III290C-1ca" name="WCS_CONTROL" label="WCS" group="WCS" state="Ok" perm="rw" rule="OneOfMany" timeout="0" timestamp="2025-02-16T03:06:49">
+    <defSwitch name="WCS_ENABLE" label="Enable">
+On
+    </defSwitch>
+    <defSwitch name="WCS_DISABLE" label="Disable">
+Off
+    </defSwitch>
+</defSwitchVector>
+<defSwitchVector device="QHY CCD QHY5III290C-1ca" name="UPLOAD_MODE" label="Upload" group="Options" state="Idle" perm="rw" rule="OneOfMany" timeout="0" timestamp="2025-02-16T03:06:49">
+    <defSwitch name="UPLOAD_CLIENT" label="Client">
+On
+    </defSwitch>
+    <defSwitch name="UPLOAD_LOCAL" label="Local">
+Off
+    </defSwitch>
+    <defSwitch name="UPLOAD_BOTH" label="Both">
+Off
+    </defSwitch>
+</defSwitchVector>
+<defTextVector device="QHY CCD QHY5III290C-1ca" name="UPLOAD_SETTINGS" label="Upload Settings" group="Options" state="Idle" perm="rw" timeout="60" timestamp="2025-02-16T03:06:49">
+    <defText name="UPLOAD_DIR" label="Dir"/>
+    <defText name="UPLOAD_PREFIX" label="Prefix">
+IMAGE_XXX
+    </defText>
+</defTextVector>
+<defSwitchVector device="QHY CCD QHY5III290C-1ca" name="CCD_FAST_TOGGLE" label="Fast Exposure" group="Options" state="Idle" perm="rw" rule="OneOfMany" timeout="0" timestamp="2025-02-16T03:06:49">
+    <defSwitch name="INDI_ENABLED" label="Enabled">
+Off
+    </defSwitch>
+    <defSwitch name="INDI_DISABLED" label="Disabled">
+On
+    </defSwitch>
+</defSwitchVector>
+<defNumberVector device="QHY CCD QHY5III290C-1ca" name="CCD_FAST_COUNT" label="Fast Count" group="Options" state="Idle" perm="rw" timeout="0" timestamp="2025-02-16T03:06:49">
+    <defNumber name="FRAMES" label="Frames" format="%.f" min="0" max="100000" step="1">
+1
+    </defNumber>
+</defNumberVector>
+<defSwitchVector device="QHY CCD QHY5III290C-1ca" name="CCD_VIDEO_STREAM" label="Video Stream" group="Streaming" state="Idle" perm="rw" rule="OneOfMany" timeout="0" timestamp="2025-02-16T03:06:49">
+    <defSwitch name="STREAM_ON" label="Stream On">
+Off
+    </defSwitch>
+    <defSwitch name="STREAM_OFF" label="Stream Off">
+On
+    </defSwitch>
+</defSwitchVector>
+<defNumberVector device="QHY CCD QHY5III290C-1ca" name="STREAM_DELAY" label="Video Stream Delay" group="Streaming" state="Idle" perm="ro" timeout="0" timestamp="2025-02-16T03:06:49">
+    <defNumber name="STREAM_DELAY_TIME" label="Delay (s)" format="%.3f" min="0" max="60" step="0.0010000000000000000208">
+0
+    </defNumber>
+</defNumberVector>
+<defNumberVector device="QHY CCD QHY5III290C-1ca" name="STREAMING_EXPOSURE" label="Expose" group="Streaming" state="Idle" perm="rw" timeout="60" timestamp="2025-02-16T03:06:49">
+    <defNumber name="STREAMING_EXPOSURE_VALUE" label="Duration (s)" format="%.6f" min="9.9999999999999995475e-07" max="60" step="0.10000000000000000555">
+0.10000000000000000555
+    </defNumber>
+    <defNumber name="STREAMING_DIVISOR_VALUE" label="Divisor" format="%.f" min="1" max="15" step="1">
+1
+    </defNumber>
+</defNumberVector>
+<defNumberVector device="QHY CCD QHY5III290C-1ca" name="FPS" label="FPS" group="Streaming" state="Idle" perm="ro" timeout="60" timestamp="2025-02-16T03:06:49">
+    <defNumber name="EST_FPS" label="Instant." format="%.2f" min="0" max="999" step="0">
+30
+    </defNumber>
+    <defNumber name="AVG_FPS" label="Average (1 sec.)" format="%.2f" min="0" max="999" step="0">
+30
+    </defNumber>
+</defNumberVector>
+<defSwitchVector device="QHY CCD QHY5III290C-1ca" name="RECORD_STREAM" label="Video Record" group="Streaming" state="Idle" perm="rw" rule="OneOfMany" timeout="0" timestamp="2025-02-16T03:06:49">
+    <defSwitch name="RECORD_ON" label="Record On">
+Off
+    </defSwitch>
+    <defSwitch name="RECORD_DURATION_ON" label="Record (Duration)">
+Off
+    </defSwitch>
+    <defSwitch name="RECORD_FRAME_ON" label="Record (Frames)">
+Off
+    </defSwitch>
+    <defSwitch name="RECORD_OFF" label="Record Off">
+On
+    </defSwitch>
+</defSwitchVector>
+<defTextVector device="QHY CCD QHY5III290C-1ca" name="RECORD_FILE" label="Record File" group="Streaming" state="Idle" perm="rw" timeout="0" timestamp="2025-02-16T03:06:49">
+    <defText name="RECORD_FILE_DIR" label="Dir.">
+/home/innyssen/Videos/indi__D_
+    </defText>
+    <defText name="RECORD_FILE_NAME" label="Name">
+indi_record__T_
+    </defText>
+</defTextVector>
+<defNumberVector device="QHY CCD QHY5III290C-1ca" name="RECORD_OPTIONS" label="Record Options" group="Streaming" state="Idle" perm="rw" timeout="60" timestamp="2025-02-16T03:06:49">
+    <defNumber name="RECORD_DURATION" label="Duration (sec)" format="%.3f" min="0.0010000000000000000208" max="999999" step="0">
+1
+    </defNumber>
+    <defNumber name="RECORD_FRAME_TOTAL" label="Frames" format="%.f" min="1" max="999999999" step="1">
+30
+    </defNumber>
+</defNumberVector>
+<defNumberVector device="QHY CCD QHY5III290C-1ca" name="CCD_STREAM_FRAME" label="Frame" group="Streaming" state="Ok" perm="rw" timeout="60" timestamp="2025-02-16T03:06:49">
+    <defNumber name="X" label="Left" format="%.f" min="0" max="1919" step="0">
+0
+    </defNumber>
+    <defNumber name="Y" label="Top" format="%.f" min="0" max="1079" step="0">
+0
+    </defNumber>
+    <defNumber name="WIDTH" label="Width" format="%.f" min="10" max="1920" step="0">
+1920
+    </defNumber>
+    <defNumber name="HEIGHT" label="Height" format="%.f" min="10" max="1080" step="0">
+1080
+    </defNumber>
+</defNumberVector>
+<defSwitchVector device="QHY CCD QHY5III290C-1ca" name="CCD_STREAM_ENCODER" label="Encoder" group="Streaming" state="Idle" perm="rw" rule="OneOfMany" timeout="0" timestamp="2025-02-16T03:06:49">
+    <defSwitch name="RAW" label="RAW">
+On
+    </defSwitch>
+    <defSwitch name="MJPEG" label="MJPEG">
+Off
+    </defSwitch>
+</defSwitchVector>
+
+.x...x..<defSwitchVector device="QHY CCD QHY5III290C-1ca" name="CCD_STREAM_RECORDER" label="Recorder" group="Streaming" state="Idle" perm="rw" rule="OneOfMany" timeout="0" timestamp="2025-02-16T03:06:49">
+    <defSwitch name="SER" label="SER">
+On
+    </defSwitch>
+</defSwitchVector>
+
+.x...x..<defNumberVector device="QHY CCD QHY5III290C-1ca" name="SCOPE_INFO" label="Scope" group="Options" state="Ok" perm="rw" timeout="60" timestamp="2025-02-16T03:06:49">
+    <defNumber name="FOCAL_LENGTH" label="Focal Length (mm)" format="%g" min="0" max="10000" step="1">
+300
+    </defNumber>
+    <defNumber name="APERTURE" label="Aperture (mm)" format="%g" min="0" max="3000" step="1">
+50
+    </defNumber>
+</defNumberVector>
+<defSwitchVector device="QHY CCD QHY5III290C-1ca" name="WCS_CONTROL" label="WCS" group="WCS" state="Ok" perm="rw" rule="OneOfMany" timeout="0" timestamp="2025-02-16T03:06:49">
+    <defSwitch name="WCS_ENABLE" label="Enable">
+On
+    </defSwitch>
+    <defSwitch name="WCS_DISABLE" label="Disable">
+Off
+    </defSwitch>
+</defSwitchVector>
+<defSwitchVector device="QHY CCD QHY5III290C-1ca" name="UPLOAD_MODE" label="Upload" group="Options" state="Idle" perm="rw" rule="OneOfMany" timeout="0" timestamp="2025-02-16T03:06:49">
+    <defSwitch name="UPLOAD_CLIENT" label="Client">
+On
+    </defSwitch>
+    <defSwitch name="UPLOAD_LOCAL" label="Local">
+Off
+    </defSwitch>
+    <defSwitch name="UPLOAD_BOTH" label="Both">
+Off
+    </defSwitch>
+</defSwitchVector>
+<defTextVector device="QHY CCD QHY5III290C-1ca" name="UPLOAD_SETTINGS" label="Upload Settings" group="Options" state="Idle" perm="rw" timeout="60" timestamp="2025-02-16T03:06:49">
+    <defText name="UPLOAD_DIR" label="Dir"/>
+    <defText name="UPLOAD_PREFIX" label="Prefix">
+IMAGE_XXX
+    </defText>
+</defTextVector>
+<defSwitchVector device="QHY CCD QHY5III290C-1ca" name="CCD_FAST_TOGGLE" label="Fast Exposure" group="Options" state="Idle" perm="rw" rule="OneOfMany" timeout="0" timestamp="2025-02-16T03:06:49">
+    <defSwitch name="INDI_ENABLED" label="Enabled">
+Off
+    </defSwitch>
+    <defSwitch name="INDI_DISABLED" label="Disabled">
+On
+    </defSwitch>
+</defSwitchVector>
+<defNumberVector device="QHY CCD QHY5III290C-1ca" name="CCD_FAST_COUNT" label="Fast Count" group="Options" state="Idle" perm="rw" timeout="0" timestamp="2025-02-16T03:06:49">
+    <defNumber name="FRAMES" label="Frames" format="%.f" min="0" max="100000" step="1">
+1
+    </defNumber>
+</defNumberVector>
+<defSwitchVector device="QHY CCD QHY5III290C-1ca" name="CCD_VIDEO_STREAM" label="Video Stream" group="Streaming" state="Idle" perm="rw" rule="OneOfMany" timeout="0" timestamp="2025-02-16T03:06:49">
+    <defSwitch name="STREAM_ON" label="Stream On">
+Off
+    </defSwitch>
+    <defSwitch name="STREAM_OFF" label="Stream Off">
+On
+    </defSwitch>
+</defSwitchVector>
+<defNumberVector device="QHY CCD QHY5III290C-1ca" name="STREAM_DELAY" label="Video Stream Delay" group="Streaming" state="Idle" perm="ro" timeout="0" timestamp="2025-02-16T03:06:49">
+    <defNumber name="STREAM_DELAY_TIME" label="Delay (s)" format="%.3f" min="0" max="60" step="0.0010000000000000000208">
+0
+    </defNumber>
+</defNumberVector>
+<defNumberVector device="QHY CCD QHY5III290C-1ca" name="STREAMING_EXPOSURE" label="Expose" group="Streaming" state="Idle" perm="rw" timeout="60" timestamp="2025-02-16T03:06:49">
+    <defNumber name="STREAMING_EXPOSURE_VALUE" label="Duration (s)" format="%.6f" min="9.9999999999999995475e-07" max="60" step="0.10000000000000000555">
+0.10000000000000000555
+    </defNumber>
+    <defNumber name="STREAMING_DIVISOR_VALUE" label="Divisor" format="%.f" min="1" max="15" step="1">
+1
+    </defNumber>
+</defNumberVector>
+<defNumberVector device="QHY CCD QHY5III290C-1ca" name="FPS" label="FPS" group="Streaming" state="Idle" perm="ro" timeout="60" timestamp="2025-02-16T03:06:49">
+    <defNumber name="EST_FPS" label="Instant." format="%.2f" min="0" max="999" step="0">
+30
+    </defNumber>
+    <defNumber name="AVG_FPS" label="Average (1 sec.)" format="%.2f" min="0" max="999" step="0">
+30
+    </defNumber>
+</defNumberVector>
+<defSwitchVector device="QHY CCD QHY5III290C-1ca" name="RECORD_STREAM" label="Video Record" group="Streaming" state="Idle" perm="rw" rule="OneOfMany" timeout="0" timestamp="2025-02-16T03:06:49">
+    <defSwitch name="RECORD_ON" label="Record On">
+Off
+    </defSwitch>
+    <defSwitch name="RECORD_DURATION_ON" label="Record (Duration)">
+Off
+    </defSwitch>
+    <defSwitch name="RECORD_FRAME_ON" label="Record (Frames)">
+Off
+    </defSwitch>
+    <defSwitch name="RECORD_OFF" label="Record Off">
+On
+    </defSwitch>
+</defSwitchVector>
+<defTextVector device="QHY CCD QHY5III290C-1ca" name="RECORD_FILE" label="Record File" group="Streaming" state="Idle" perm="rw" timeout="0" timestamp="2025-02-16T03:06:49">
+    <defText name="RECORD_FILE_DIR" label="Dir.">
+/home/innyssen/Videos/indi__D_
+    </defText>
+    <defText name="RECORD_FILE_NAME" label="Name">
+indi_record__T_
+    </defText>
+</defTextVector>
+<defNumberVector device="QHY CCD QHY5III290C-1ca" name="RECORD_OPTIONS" label="Record Options" group="Streaming" state="Idle" perm="rw" timeout="60" timestamp="2025-02-16T03:06:49">
+    <defNumber name="RECORD_DURATION" label="Duration (sec)" format="%.3f" min="0.0010000000000000000208" max="999999" step="0">
+1
+    </defNumber>
+    <defNumber name="RECORD_FRAME_TOTAL" label="Frames" format="%.f" min="1" max="999999999" step="1">
+30
+    </defNumber>
+</defNumberVector>
+<defNumberVector device="QHY CCD QHY5III290C-1ca" name="CCD_STREAM_FRAME" label="Frame" group="Streaming" state="Ok" perm="rw" timeout="60" timestamp="2025-02-16T03:06:49">
+    <defNumber name="X" label="Left" format="%.f" min="0" max="1919" step="0">
+0
+    </defNumber>
+    <defNumber name="Y" label="Top" format="%.f" min="0" max="1079" step="0">
+0
+    </defNumber>
+    <defNumber name="WIDTH" label="Width" format="%.f" min="10" max="1920" step="0">
+1920
+    </defNumber>
+    <defNumber name="HEIGHT" label="Height" format="%.f" min="10" max="1080" step="0">
+1080
+    </defNumber>
+</defNumberVector>
+<defSwitchVector device="QHY CCD QHY5III290C-1ca" name="CCD_STREAM_ENCODER" label="Encoder" group="Streaming" state="Idle" perm="rw" rule="OneOfMany" timeout="0" timestamp="2025-02-16T03:06:49">
+    <defSwitch name="RAW" label="RAW">
+On
+    </defSwitch>
+    <defSwitch name="MJPEG" label="MJPEG">
+Off
+    </defSwitch>
+</defSwitchVector>
+
+.x...x..<defNumberVector device="QHY CCD QHY5III290C-1ca" name="LIMITS" label="Limits" group="Streaming" state="Idle" perm="rw" timeout="0" timestamp="2025-02-16T03:06:49">
+    <defNumber name="LIMITS_BUFFER_MAX" label="Maximum Buffer Size (MB)" format="%.0f" min="1" max="65536" step="1">
+512
+    </defNumber>
+    <defNumber name="LIMITS_PREVIEW_FPS" label="Maximum Preview FPS" format="%.0f" min="1" max="120" step="1">
+10
+    </defNumber>
+</defNumberVector>
+<defNumberVector device="QHY CCD QHY5III290C-1ca" name="CCD_GAIN" label="Gain" group="Main Control" state="Idle" perm="rw" timeout="60" timestamp="2025-02-16T03:06:49">
+    <defNumber name="GAIN" label="Gain" format="%.f" min="0" max="729" step="3">
+30
+    </defNumber>
+</defNumberVector>
+<defNumberVector device="QHY CCD QHY5III290C-1ca" name="CCD_OFFSET" label="Offset" group="Main Control" state="Idle" perm="rw" timeout="60" timestamp="2025-02-16T03:06:49">
+    <defNumber name="OFFSET" label="Offset" format="%.f" min="0" max="511" step="1">
+0
+    </defNumber>
+</defNumberVector>
+<defNumberVector device="QHY CCD QHY5III290C-1ca" name="USB_TRAFFIC" label="USB Traffic" group="Main Control" state="Idle" perm="rw" timeout="60" timestamp="2025-02-16T03:06:49">
+    <defNumber name="TRAFFIC" label="Speed" format="%.f" min="0" max="60" step="3">
+40
+    </defNumber>
+</defNumberVector>
+<defNumberVector device="QHY CCD QHY5III290C-1ca" name="USB_BUFFER" label="USB Buffer" group="Main Control" state="Idle" perm="rw" timeout="60" timestamp="2025-02-16T03:06:49">
+    <defNumber name="BUFFER" label="Bytes" format="%.f" min="512" max="4096" step="512">
+512
+    </defNumber>
+</defNumberVector>
+<defTextVector device="QHY CCD QHY5III290C-1ca" name="SDK_VERSION" label="SDK" group="General Info" state="Ok" perm="ro" timeout="60" timestamp="2025-02-16T03:06:49">
+    <defText name="VERSION" label="Version">
+25.1.19
+    </defText>
+</defTextVector>
+<defSwitchVector device="QHY CCD QHY5III290C-1ca" name="CCD_AMP_GLOW" label="Amp Glow" group="Main Control" state="Idle" perm="rw" rule="OneOfMany" timeout="0" timestamp="2025-02-16T03:06:49">
+    <defSwitch name="AMP_AUTO" label="Auto">
+On
+    </defSwitch>
+    <defSwitch name="AMP_ON" label="On">
+Off
+    </defSwitch>
+    <defSwitch name="AMP_OFF" label="Off">
+Off
+    </defSwitch>
+</defSwitchVector>
+<defNumberVector device="QHY CCD QHY5III290C-1ca" name="CCD_ROTATION" label="CCD FOV" group="WCS" state="Idle" perm="rw" timeout="60" timestamp="2025-02-16T03:06:49">
+    <defNumber name="CCD_ROTATION_VALUE" label="Rotation" format="%g" min="-360" max="360" step="1">
+0
+    </defNumber>
+</defNumberVector>
+<defTextVector device="QHY CCD QHY5III290C-1ca" name="ACTIVE_DEVICES" label="Snoop devices" group="Options" state="Ok" perm="rw" timeout="60" timestamp="2025-02-16T03:06:49">
+    <defText name="ACTIVE_TELESCOPE" label="Telescope"/>
+    <defText name="ACTIVE_ROTATOR" label="Rotator"/>
+    <defText name="ACTIVE_FOCUSER" label="Focuser"/>
+    <defText name="ACTIVE_FILTER" label="Filter"/>
+    <defText name="ACTIVE_SKYQUALITY" label="Sky Quality">
+SQM
+    </defText>
+</defTextVector>
+<defSwitchVector device="QHY CCD QHY5III290C-1ca" name="CCD_VIDEO_STREAM" label="Video Stream" group="Streaming" state="Idle" perm="rw" rule="OneOfMany" timeout="0" timestamp="2025-02-16T03:06:49">
+    <defSwitch name="STREAM_ON" label="Stream On">
+Off
+    </defSwitch>
+    <defSwitch name="STREAM_OFF" label="Stream Off">
+On
+    </defSwitch>
+</defSwitchVector>
+<defNumberVector device="QHY CCD QHY5III290C-1ca" name="STREAMING_EXPOSURE" label="Expose" group="Streaming" state="Idle" perm="rw" timeout="60" timestamp="2025-02-16T03:06:49">
+    <defNumber name="STREAMING_EXPOSURE_VALUE" label="Duration (s)" format="%.6f" min="9.9999999999999995475e-07" max="60" step="0.10000000000000000555">
+0.10000000000000000555
+    </defNumber>
+    <defNumber name="STREAMING_DIVISOR_VALUE" label="Divisor" format="%.f" min="1" max="15" step="1">
+1
+    </defNumber>
+</defNumberVector>
+<defNumberVector device="QHY CCD QHY5III290C-1ca" name="FPS" label="FPS" group="Streaming" state="Idle" perm="ro" timeout="60" timestamp="2025-02-16T03:06:49">
+    <defNumber name="EST_FPS" label="Instant." format="%.2f" min="0" max="999" step="0">
+30
+    </defNumber>
+    <defNumber name="AVG_FPS" label="Average (1 sec.)" format="%.2f" min="0" max="999" step="0">
+30
+    </defNumber>
+</defNumberVector>
+<defSwitchVector device="QHY CCD QHY5III290C-1ca" name="RECORD_STREAM" label="Video Record" group="Streaming" state="Idle" perm="rw" rule="OneOfMany" timeout="0" timestamp="2025-02-16T03:06:49">
+    <defSwitch name="RECORD_ON" label="Record On">
+Off
+    </defSwitch>
+    <defSwitch name="RECORD_DURATION_ON" label="Record (Duration)">
+Off
+    </defSwitch>
+    <defSwitch name="RECORD_FRAME_ON" label="Record (Frames)">
+Off
+    </defSwitch>
+    <defSwitch name="RECORD_OFF" label="Record Off">
+On
+    </defSwitch>
+</defSwitchVector>
+<defTextVector device="QHY CCD QHY5III290C-1ca" name="RECORD_FILE" label="Record File" group="Streaming" state="Idle" perm="rw" timeout="0" timestamp="2025-02-16T03:06:49">
+    <defText name="RECORD_FILE_DIR" label="Dir.">
+/home/innyssen/Videos/indi__D_
+    </defText>
+    <defText name="RECORD_FILE_NAME" label="Name">
+indi_record__T_
+    </defText>
+</defTextVector>
+<defNumberVector device="QHY CCD QHY5III290C-1ca" name="RECORD_OPTIONS" label="Record Options" group="Streaming" state="Idle" perm="rw" timeout="60" timestamp="2025-02-16T03:06:49">
+    <defNumber name="RECORD_DURATION" label="Duration (sec)" format="%.3f" min="0.0010000000000000000208" max="999999" step="0">
+1
+    </defNumber>
+    <defNumber name="RECORD_FRAME_TOTAL" label="Frames" format="%.f" min="1" max="999999999" step="1">
+30
+    </defNumber>
+</defNumberVector>
+<defNumberVector device="QHY CCD QHY5III290C-1ca" name="CCD_STREAM_FRAME" label="Frame" group="Streaming" state="Ok" perm="rw" timeout="60" timestamp="2025-02-16T03:06:49">
+    <defNumber name="X" label="Left" format="%.f" min="0" max="1919" step="0">
+0
+    </defNumber>
+    <defNumber name="Y" label="Top" format="%.f" min="0" max="1079" step="0">
+0
+    </defNumber>
+    <defNumber name="WIDTH" label="Width" format="%.f" min="10" max="1920" step="0">
+1920
+    </defNumber>
+    <defNumber name="HEIGHT" label="Height" format="%.f" min="10" max="1080" step="0">
+1080
+    </defNumber>
+</defNumberVector>
+
+.x...x..<defSwitchVector device="QHY CCD QHY5III290C-1ca" name="CCD_STREAM_RECORDER" label="Recorder" group="Streaming" state="Idle" perm="rw" rule="OneOfMany" timeout="0" timestamp="2025-02-16T03:06:49">
+    <defSwitch name="SER" label="SER">
+On
+    </defSwitch>
+</defSwitchVector>
+<defNumberVector device="QHY CCD QHY5III290C-1ca" name="LIMITS" label="Limits" group="Streaming" state="Idle" perm="rw" timeout="0" timestamp="2025-02-16T03:06:49">
+    <defNumber name="LIMITS_BUFFER_MAX" label="Maximum Buffer Size (MB)" format="%.0f" min="1" max="65536" step="1">
+512
+    </defNumber>
+    <defNumber name="LIMITS_PREVIEW_FPS" label="Maximum Preview FPS" format="%.0f" min="1" max="120" step="1">
+10
+    </defNumber>
+</defNumberVector>
+<defNumberVector device="QHY CCD QHY5III290C-1ca" name="CCD_GAIN" label="Gain" group="Main Control" state="Idle" perm="rw" timeout="60" timestamp="2025-02-16T03:06:49">
+    <defNumber name="GAIN" label="Gain" format="%.f" min="0" max="729" step="3">
+30
+    </defNumber>
+</defNumberVector>
+<defNumberVector device="QHY CCD QHY5III290C-1ca" name="CCD_OFFSET" label="Offset" group="Main Control" state="Idle" perm="rw" timeout="60" timestamp="2025-02-16T03:06:49">
+    <defNumber name="OFFSET" label="Offset" format="%.f" min="0" max="511" step="1">
+0
+    </defNumber>
+</defNumberVector>
+<defNumberVector device="QHY CCD QHY5III290C-1ca" name="USB_TRAFFIC" label="USB Traffic" group="Main Control" state="Idle" perm="rw" timeout="60" timestamp="2025-02-16T03:06:49">
+    <defNumber name="TRAFFIC" label="Speed" format="%.f" min="0" max="60" step="3">
+40
+    </defNumber>
+</defNumberVector>
+<defNumberVector device="QHY CCD QHY5III290C-1ca" name="USB_BUFFER" label="USB Buffer" group="Main Control" state="Idle" perm="rw" timeout="60" timestamp="2025-02-16T03:06:49">
+    <defNumber name="BUFFER" label="Bytes" format="%.f" min="512" max="4096" step="512">
+512
+    </defNumber>
+</defNumberVector>
+<defTextVector device="QHY CCD QHY5III290C-1ca" name="SDK_VERSION" label="SDK" group="General Info" state="Ok" perm="ro" timeout="60" timestamp="2025-02-16T03:06:49">
+    <defText name="VERSION" label="Version">
+25.1.19
+    </defText>
+</defTextVector>
+<defSwitchVector device="QHY CCD QHY5III290C-1ca" name="CCD_AMP_GLOW" label="Amp Glow" group="Main Control" state="Idle" perm="rw" rule="OneOfMany" timeout="0" timestamp="2025-02-16T03:06:49">
+    <defSwitch name="AMP_AUTO" label="Auto">
+On
+    </defSwitch>
+    <defSwitch name="AMP_ON" label="On">
+Off
+    </defSwitch>
+    <defSwitch name="AMP_OFF" label="Off">
+Off
+    </defSwitch>
+</defSwitchVector>
+<defNumberVector device="QHY CCD QHY5III290C-1ca" name="CCD_ROTATION" label="CCD FOV" group="WCS" state="Idle" perm="rw" timeout="60" timestamp="2025-02-16T03:06:49">
+    <defNumber name="CCD_ROTATION_VALUE" label="Rotation" format="%g" min="-360" max="360" step="1">
+0
+    </defNumber>
+</defNumberVector>
+<defTextVector device="QHY CCD QHY5III290C-1ca" name="ACTIVE_DEVICES" label="Snoop devices" group="Options" state="Ok" perm="rw" timeout="60" timestamp="2025-02-16T03:06:49">
+    <defText name="ACTIVE_TELESCOPE" label="Telescope"/>
+    <defText name="ACTIVE_ROTATOR" label="Rotator"/>
+    <defText name="ACTIVE_FOCUSER" label="Focuser"/>
+    <defText name="ACTIVE_FILTER" label="Filter"/>
+    <defText name="ACTIVE_SKYQUALITY" label="Sky Quality">
+SQM
+    </defText>
+</defTextVector>
+<defSwitchVector device="QHY CCD QHY5III290C-1ca" name="CCD_VIDEO_STREAM" label="Video Stream" group="Streaming" state="Idle" perm="rw" rule="OneOfMany" timeout="0" timestamp="2025-02-16T03:06:49">
+    <defSwitch name="STREAM_ON" label="Stream On">
+Off
+    </defSwitch>
+    <defSwitch name="STREAM_OFF" label="Stream Off">
+On
+    </defSwitch>
+</defSwitchVector>
+<defNumberVector device="QHY CCD QHY5III290C-1ca" name="STREAMING_EXPOSURE" label="Expose" group="Streaming" state="Idle" perm="rw" timeout="60" timestamp="2025-02-16T03:06:49">
+    <defNumber name="STREAMING_EXPOSURE_VALUE" label="Duration (s)" format="%.6f" min="9.9999999999999995475e-07" max="60" step="0.10000000000000000555">
+0.10000000000000000555
+    </defNumber>
+    <defNumber name="STREAMING_DIVISOR_VALUE" label="Divisor" format="%.f" min="1" max="15" step="1">
+1
+    </defNumber>
+</defNumberVector>
+<defNumberVector device="QHY CCD QHY5III290C-1ca" name="FPS" label="FPS" group="Streaming" state="Idle" perm="ro" timeout="60" timestamp="2025-02-16T03:06:49">
+    <defNumber name="EST_FPS" label="Instant." format="%.2f" min="0" max="999" step="0">
+30
+    </defNumber>
+    <defNumber name="AVG_FPS" label="Average (1 sec.)" format="%.2f" min="0" max="999" step="0">
+30
+    </defNumber>
+</defNumberVector>
+<defSwitchVector device="QHY CCD QHY5III290C-1ca" name="RECORD_STREAM" label="Video Record" group="Streaming" state="Idle" perm="rw" rule="OneOfMany" timeout="0" timestamp="2025-02-16T03:06:49">
+    <defSwitch name="RECORD_ON" label="Record On">
+Off
+    </defSwitch>
+    <defSwitch name="RECORD_DURATION_ON" label="Record (Duration)">
+Off
+    </defSwitch>
+    <defSwitch name="RECORD_FRAME_ON" label="Record (Frames)">
+Off
+    </defSwitch>
+    <defSwitch name="RECORD_OFF" label="Record Off">
+On
+    </defSwitch>
+</defSwitchVector>
+<defTextVector device="QHY CCD QHY5III290C-1ca" name="RECORD_FILE" label="Record File" group="Streaming" state="Idle" perm="rw" timeout="0" timestamp="2025-02-16T03:06:49">
+    <defText name="RECORD_FILE_DIR" label="Dir.">
+/home/innyssen/Videos/indi__D_
+    </defText>
+    <defText name="RECORD_FILE_NAME" label="Name">
+indi_record__T_
+    </defText>
+</defTextVector>
+<defNumberVector device="QHY CCD QHY5III290C-1ca" name="RECORD_OPTIONS" label="Record Options" group="Streaming" state="Idle" perm="rw" timeout="60" timestamp="2025-02-16T03:06:49">
+    <defNumber name="RECORD_DURATION" label="Duration (sec)" format="%.3f" min="0.0010000000000000000208" max="999999" step="0">
+1
+    </defNumber>
+    <defNumber name="RECORD_FRAME_TOTAL" label="Frames" format="%.f" min="1" max="999999999" step="1">
+30
+    </defNumber>
+</defNumberVector>
+<defNumberVector device="QHY CCD QHY5III290C-1ca" name="CCD_STREAM_FRAME" label="Frame" group="Streaming" state="Ok" perm="rw" timeout="60" timestamp="2025-02-16T03:06:49">
+    <defNumber name="X" label="Left" format="%.f" min="0" max="1919" step="0">
+0
+    </defNumber>
+    <defNumber name="Y" label="Top" format="%.f" min="0" max="1079" step="0">
+0
+    </defNumber>
+    <defNumber name="WIDTH" label="Width" format="%.f" min="10" max="1920" step="0">
+1920
+    </defNumber>
+    <defNumber name="HEIGHT" label="Height" format="%.f" min="10" max="1080" step="0">
+1080
+    </defNumber>
+</defNumberVector>
+
+.x...x..<defSwitchVector device="QHY CCD QHY5III290C-1ca" name="CCD_STREAM_ENCODER" label="Encoder" group="Streaming" state="Idle" perm="rw" rule="OneOfMany" timeout="0" timestamp="2025-02-16T03:06:49">
+    <defSwitch name="RAW" label="RAW">
+On
+    </defSwitch>
+    <defSwitch name="MJPEG" label="MJPEG">
+Off
+    </defSwitch>
+</defSwitchVector>
+<defSwitchVector device="QHY CCD QHY5III290C-1ca" name="CCD_STREAM_RECORDER" label="Recorder" group="Streaming" state="Idle" perm="rw" rule="OneOfMany" timeout="0" timestamp="2025-02-16T03:06:49">
+    <defSwitch name="SER" label="SER">
+On
+    </defSwitch>
+</defSwitchVector>
+<defNumberVector device="QHY CCD QHY5III290C-1ca" name="LIMITS" label="Limits" group="Streaming" state="Idle" perm="rw" timeout="0" timestamp="2025-02-16T03:06:49">
+    <defNumber name="LIMITS_BUFFER_MAX" label="Maximum Buffer Size (MB)" format="%.0f" min="1" max="65536" step="1">
+512
+    </defNumber>
+    <defNumber name="LIMITS_PREVIEW_FPS" label="Maximum Preview FPS" format="%.0f" min="1" max="120" step="1">
+10
+    </defNumber>
+</defNumberVector>
+<defNumberVector device="QHY CCD QHY5III290C-1ca" name="CCD_GAIN" label="Gain" group="Main Control" state="Idle" perm="rw" timeout="60" timestamp="2025-02-16T03:06:49">
+    <defNumber name="GAIN" label="Gain" format="%.f" min="0" max="729" step="3">
+30
+    </defNumber>
+</defNumberVector>
+<defNumberVector device="QHY CCD QHY5III290C-1ca" name="CCD_OFFSET" label="Offset" group="Main Control" state="Idle" perm="rw" timeout="60" timestamp="2025-02-16T03:06:49">
+    <defNumber name="OFFSET" label="Offset" format="%.f" min="0" max="511" step="1">
+0
+    </defNumber>
+</defNumberVector>
+<defNumberVector device="QHY CCD QHY5III290C-1ca" name="USB_TRAFFIC" label="USB Traffic" group="Main Control" state="Idle" perm="rw" timeout="60" timestamp="2025-02-16T03:06:49">
+    <defNumber name="TRAFFIC" label="Speed" format="%.f" min="0" max="60" step="3">
+40
+    </defNumber>
+</defNumberVector>
+<defNumberVector device="QHY CCD QHY5III290C-1ca" name="USB_BUFFER" label="USB Buffer" group="Main Control" state="Idle" perm="rw" timeout="60" timestamp="2025-02-16T03:06:49">
+    <defNumber name="BUFFER" label="Bytes" format="%.f" min="512" max="4096" step="512">
+512
+    </defNumber>
+</defNumberVector>
+<defTextVector device="QHY CCD QHY5III290C-1ca" name="SDK_VERSION" label="SDK" group="General Info" state="Ok" perm="ro" timeout="60" timestamp="2025-02-16T03:06:49">
+    <defText name="VERSION" label="Version">
+25.1.19
+    </defText>
+</defTextVector>
+<defSwitchVector device="QHY CCD QHY5III290C-1ca" name="CCD_AMP_GLOW" label="Amp Glow" group="Main Control" state="Idle" perm="rw" rule="OneOfMany" timeout="0" timestamp="2025-02-16T03:06:49">
+    <defSwitch name="AMP_AUTO" label="Auto">
+On
+    </defSwitch>
+    <defSwitch name="AMP_ON" label="On">
+Off
+    </defSwitch>
+    <defSwitch name="AMP_OFF" label="Off">
+Off
+    </defSwitch>
+</defSwitchVector>
+
+.x...x..<defSwitchVector device="QHY CCD QHY5III290C-1ca" name="CCD_STREAM_ENCODER" label="Encoder" group="Streaming" state="Idle" perm="rw" rule="OneOfMany" timeout="0" timestamp="2025-02-16T03:06:49">
+    <defSwitch name="RAW" label="RAW">
+On
+    </defSwitch>
+    <defSwitch name="MJPEG" label="MJPEG">
+Off
+    </defSwitch>
+</defSwitchVector>
+<defSwitchVector device="QHY CCD QHY5III290C-1ca" name="CCD_STREAM_RECORDER" label="Recorder" group="Streaming" state="Idle" perm="rw" rule="OneOfMany" timeout="0" timestamp="2025-02-16T03:06:49">
+    <defSwitch name="SER" label="SER">
+On
+    </defSwitch>
+</defSwitchVector>
+<defNumberVector device="QHY CCD QHY5III290C-1ca" name="LIMITS" label="Limits" group="Streaming" state="Idle" perm="rw" timeout="0" timestamp="2025-02-16T03:06:49">
+    <defNumber name="LIMITS_BUFFER_MAX" label="Maximum Buffer Size (MB)" format="%.0f" min="1" max="65536" step="1">
+512
+    </defNumber>
+    <defNumber name="LIMITS_PREVIEW_FPS" label="Maximum Preview FPS" format="%.0f" min="1" max="120" step="1">
+10
+    </defNumber>
+</defNumberVector>
+<defNumberVector device="QHY CCD QHY5III290C-1ca" name="CCD_GAIN" label="Gain" group="Main Control" state="Idle" perm="rw" timeout="60" timestamp="2025-02-16T03:06:49">
+    <defNumber name="GAIN" label="Gain" format="%.f" min="0" max="729" step="3">
+30
+    </defNumber>
+</defNumberVector>
+<defNumberVector device="QHY CCD QHY5III290C-1ca" name="CCD_OFFSET" label="Offset" group="Main Control" state="Idle" perm="rw" timeout="60" timestamp="2025-02-16T03:06:49">
+    <defNumber name="OFFSET" label="Offset" format="%.f" min="0" max="511" step="1">
+0
+    </defNumber>
+</defNumberVector>
+<defNumberVector device="QHY CCD QHY5III290C-1ca" name="USB_TRAFFIC" label="USB Traffic" group="Main Control" state="Idle" perm="rw" timeout="60" timestamp="2025-02-16T03:06:49">
+    <defNumber name="TRAFFIC" label="Speed" format="%.f" min="0" max="60" step="3">
+40
+    </defNumber>
+</defNumberVector>
+<defNumberVector device="QHY CCD QHY5III290C-1ca" name="USB_BUFFER" label="USB Buffer" group="Main Control" state="Idle" perm="rw" timeout="60" timestamp="2025-02-16T03:06:49">
+    <defNumber name="BUFFER" label="Bytes" format="%.f" min="512" max="4096" step="512">
+512
+    </defNumber>
+</defNumberVector>
+<defTextVector device="QHY CCD QHY5III290C-1ca" name="SDK_VERSION" label="SDK" group="General Info" state="Ok" perm="ro" timeout="60" timestamp="2025-02-16T03:06:49">
+    <defText name="VERSION" label="Version">
+25.1.19
+    </defText>
+</defTextVector>
+<defSwitchVector device="QHY CCD QHY5III290C-1ca" name="CCD_AMP_GLOW" label="Amp Glow" group="Main Control" state="Idle" perm="rw" rule="OneOfMany" timeout="0" timestamp="2025-02-16T03:06:49">
+    <defSwitch name="AMP_AUTO" label="Auto">
+On
+    </defSwitch>
+    <defSwitch name="AMP_ON" label="On">
+Off
+    </defSwitch>
+    <defSwitch name="AMP_OFF" label="Off">
+Off
+    </defSwitch>
+</defSwitchVector>
+
+  <oneNumber name='FOCAL_LENGTH'>
+      300
+  </oneNumber>
+  <oneNumber name='APERTURE'>
+      50
+  </oneNumber>
+</newNumberVector>
+<newNumberVector device='QHY CCD QHY5III290C-1ca' name='SCOPE_INFO'>
+  <oneNumber name='FOCAL_LENGTH'>
+      300
+  </oneNumber>
+  <oneNumber name='APERTURE'>
+      50
+  </oneNumber>
+</newNumberVector>
+
+.x.4.x..<newNumberVector device="QHY CCD QHY5III290C-1ca" name="SCOPE_INFO">
+    <oneNumber name="FOCAL_LENGTH">
+300
+    </oneNumber>
+    <oneNumber name="APERTURE">
+50
+    </oneNumber>
+</newNumberVector>
+
+.x.4.x.4<newNumberVector device="QHY CCD QHY5III290C-1ca" name="SCOPE_INFO">
+    <oneNumber name="FOCAL_LENGTH">
+300
+    </oneNumber>
+    <oneNumber name="APERTURE">
+50
+    </oneNumber>
+</newNumberVector>
+
+.x.4.x.4<setNumberVector device="QHY CCD QHY5III290C-1ca" name="SCOPE_INFO" state="Ok" timeout="60" timestamp="2025-02-16T03:06:49">
+    <oneNumber name="FOCAL_LENGTH">
+300
+    </oneNumber>
+    <oneNumber name="APERTURE">
+50
+    </oneNumber>
+</setNumberVector>
+
+.x.4.x.4<setNumberVector device="QHY CCD QHY5III290C-1ca" name="SCOPE_INFO" state="Ok" timeout="60" timestamp="2025-02-16T03:06:49">
+    <oneNumber name="FOCAL_LENGTH">
+300
+    </oneNumber>
+    <oneNumber name="APERTURE">
+50
+    </oneNumber>
+</setNumberVector>
+
+.x.4.x.4<setNumberVector device="QHY CCD QHY5III290C-1ca" name="SCOPE_INFO" state="Ok" timeout="60" timestamp="2025-02-16T03:06:49">
+    <oneNumber name="FOCAL_LENGTH">
+300
+    </oneNumber>
+    <oneNumber name="APERTURE">
+50
+    </oneNumber>
+</setNumberVector>
+
+.x.4.x.4<setNumberVector device="QHY CCD QHY5III290C-1ca" name="SCOPE_INFO" state="Ok" timeout="60" timestamp="2025-02-16T03:06:49">
+    <oneNumber name="FOCAL_LENGTH">
+300
+    </oneNumber>
+    <oneNumber name="APERTURE">
+50
+    </oneNumber>
+</setNumberVector>
+
+  <oneText name='KEYWORD_NAME'>
+      TELESCOP
+  </oneText>
+  <oneText name='KEYWORD_VALUE'>
+      Sample Guide 300@F/6.0
+  </oneText>
+  <oneText name='KEYWORD_COMMENT'>
+      Telescope
+  </oneText>
+</newTextVector>
+<newSwitchVector device='QHY CCD QHY5III290C-1ca' name='CCD_CAPTURE_FORMAT'>
+  <oneSwitch name='INDI_RAW'>
+      On
+  </oneSwitch>
+</newSwitchVector>
+<newNumberVector device='QHY CCD QHY5III290C-1ca' name='CCD_EXPOSURE'>
+  <oneNumber name='CCD_EXPOSURE_VALUE'>
+      2
+  </oneNumber>
+</newNumberVector>
+
+.x...x.4<newTextVector device="QHY CCD QHY5III290C-1ca" name="FITS_HEADER">
+    <oneText name="KEYWORD_NAME">
+TELESCOP
+    </oneText>
+    <oneText name="KEYWORD_VALUE">
+Sample Guide 300@F/6.0
+    </oneText>
+    <oneText name="KEYWORD_COMMENT">
+Telescope
+    </oneText>
+</newTextVector>
+
+.x...x..<newSwitchVector device="QHY CCD QHY5III290C-1ca" name="CCD_CAPTURE_FORMAT">
+    <oneSwitch name="INDI_RAW">
+On
+    </oneSwitch>
+</newSwitchVector>
+
+.x...x..<newNumberVector device="QHY CCD QHY5III290C-1ca" name="CCD_EXPOSURE">
+    <oneNumber name="CCD_EXPOSURE_VALUE">
+2
+    </oneNumber>
+</newNumberVector>
+
+.x...x..<setTextVector device="QHY CCD QHY5III290C-1ca" name="FITS_HEADER" state="Ok" timeout="60" timestamp="2025-02-16T03:06:58">
+    <oneText name="KEYWORD_NAME">
+TELESCOP
+    </oneText>
+    <oneText name="KEYWORD_VALUE">
+Sample Guide 300@F/6.0
+    </oneText>
+    <oneText name="KEYWORD_COMMENT">
+Telescope
+    </oneText>
+</setTextVector>
+
+.x...x..<setTextVector device="QHY CCD QHY5III290C-1ca" name="FITS_HEADER" state="Ok" timeout="60" timestamp="2025-02-16T03:06:58">
+    <oneText name="KEYWORD_NAME">
+TELESCOP
+    </oneText>
+    <oneText name="KEYWORD_VALUE">
+Sample Guide 300@F/6.0
+    </oneText>
+    <oneText name="KEYWORD_COMMENT">
+Telescope
+    </oneText>
+</setTextVector>
+
+.x...x..<setSwitchVector device="QHY CCD QHY5III290C-1ca" name="CCD_CAPTURE_FORMAT" state="Ok" timeout="60" timestamp="2025-02-16T03:06:58">
+    <oneSwitch name="INDI_RAW">
+On
+    </oneSwitch>
+</setSwitchVector>
+
+.x...x..<setSwitchVector device="QHY CCD QHY5III290C-1ca" name="CCD_CAPTURE_FORMAT" state="Ok" timeout="60" timestamp="2025-02-16T03:06:58">
+    <oneSwitch name="INDI_RAW">
+On
+    </oneSwitch>
+</setSwitchVector>
+
+.x...x..<setNumberVector device="QHY CCD QHY5III290C-1ca" name="CCD_EXPOSURE" state="Busy" timeout="60" timestamp="2025-02-16T03:06:58">
+    <oneNumber name="CCD_EXPOSURE_VALUE">
+2
+    </oneNumber>
+</setNumberVector>
+
+.x...x..<setNumberVector device="QHY CCD QHY5III290C-1ca" name="CCD_EXPOSURE" state="Busy" timeout="60" timestamp="2025-02-16T03:06:58">
+    <oneNumber name="CCD_EXPOSURE_VALUE">
+2
+    </oneNumber>
+</setNumberVector>
+
+.x.(.x..<setNumberVector device="QHY CCD QHY5III290C-1ca" name="CCD_EXPOSURE" state="Busy" timeout="60" timestamp="2025-02-16T03:06:58">
+    <oneNumber name="CCD_EXPOSURE_VALUE">
+2
+    </oneNumber>
+</setNumberVector>
+
+.x.(.x..<setNumberVector device="QHY CCD QHY5III290C-1ca" name="CCD_EXPOSURE" state="Busy" timeout="60" timestamp="2025-02-16T03:06:58">
+    <oneNumber name="CCD_EXPOSURE_VALUE">
+2
+    </oneNumber>
+</setNumberVector>
+
+.x...x.(<setNumberVector device="QHY CCD QHY5III290C-1ca" name="CCD_EXPOSURE" state="Busy" timeout="60" timestamp="2025-02-16T03:06:59">
+    <oneNumber name="CCD_EXPOSURE_VALUE">
+0.98999999999999999112
+    </oneNumber>
+</setNumberVector>
+
+.x...x.(<setNumberVector device="QHY CCD QHY5III290C-1ca" name="CCD_EXPOSURE" state="Busy" timeout="60" timestamp="2025-02-16T03:06:59">
+    <oneNumber name="CCD_EXPOSURE_VALUE">
+0.98999999999999999112
+    </oneNumber>
+</setNumberVector>
+
+.x.t.x..<setNumberVector device="QHY CCD QHY5III290C-1ca" name="CCD_EXPOSURE" state="Busy" timeout="60" timestamp="2025-02-16T03:06:59">
+    <oneNumber name="CCD_EXPOSURE_VALUE">
+0.8899999999999999023
+    </oneNumber>
+</setNumberVector>
+
+.x.t.x..<setNumberVector device="QHY CCD QHY5III290C-1ca" name="CCD_EXPOSURE" state="Busy" timeout="60" timestamp="2025-02-16T03:06:59">
+    <oneNumber name="CCD_EXPOSURE_VALUE">
+0.8899999999999999023
+    </oneNumber>
+</setNumberVector>
+
+.x...x.t<setNumberVector device="QHY CCD QHY5III290C-1ca" name="CCD_EXPOSURE" state="Busy" timeout="60" timestamp="2025-02-16T03:06:59">
+    <oneNumber name="CCD_EXPOSURE_VALUE">
+0.79000000000000003553
+    </oneNumber>
+</setNumberVector>
+
+.x...x.t<setNumberVector device="QHY CCD QHY5III290C-1ca" name="CCD_EXPOSURE" state="Busy" timeout="60" timestamp="2025-02-16T03:06:59">
+    <oneNumber name="CCD_EXPOSURE_VALUE">
+0.79000000000000003553
+    </oneNumber>
+</setNumberVector>
+
+.x.<.x..<setNumberVector device="QHY CCD QHY5III290C-1ca" name="CCD_EXPOSURE" state="Busy" timeout="60" timestamp="2025-02-16T03:07:00">
+    <oneNumber name="CCD_EXPOSURE_VALUE">
+0.68999999999999994671
+    </oneNumber>
+</setNumberVector>
+
+.x.<.x..<setNumberVector device="QHY CCD QHY5III290C-1ca" name="CCD_EXPOSURE" state="Busy" timeout="60" timestamp="2025-02-16T03:07:00">
+    <oneNumber name="CCD_EXPOSURE_VALUE">
+0.68999999999999994671
+    </oneNumber>
+</setNumberVector>
+
+.x...x.<<setNumberVector device="QHY CCD QHY5III290C-1ca" name="CCD_EXPOSURE" state="Busy" timeout="60" timestamp="2025-02-16T03:07:00">
+    <oneNumber name="CCD_EXPOSURE_VALUE">
+0.59000000000000007994
+    </oneNumber>
+</setNumberVector>
+
+.x...x.<<setNumberVector device="QHY CCD QHY5III290C-1ca" name="CCD_EXPOSURE" state="Busy" timeout="60" timestamp="2025-02-16T03:07:00">
+    <oneNumber name="CCD_EXPOSURE_VALUE">
+0.59000000000000007994
+    </oneNumber>
+</setNumberVector>
+
+.x...x..<setNumberVector device="QHY CCD QHY5III290C-1ca" name="CCD_EXPOSURE" state="Busy" timeout="60" timestamp="2025-02-16T03:07:00">
+    <oneNumber name="CCD_EXPOSURE_VALUE">
+0.48999999999999999112
+    </oneNumber>
+</setNumberVector>
+
+.x...x..<setNumberVector device="QHY CCD QHY5III290C-1ca" name="CCD_EXPOSURE" state="Busy" timeout="60" timestamp="2025-02-16T03:07:00">
+    <oneNumber name="CCD_EXPOSURE_VALUE">
+0.48999999999999999112
+    </oneNumber>
+</setNumberVector>
+
+.x.i.x..<setNumberVector device="QHY CCD QHY5III290C-1ca" name="CCD_EXPOSURE" state="Busy" timeout="60" timestamp="2025-02-16T03:07:00">
+    <oneNumber name="CCD_EXPOSURE_VALUE">
+0.38900000000000001243
+    </oneNumber>
+</setNumberVector>
+
+.x.i.x..<setNumberVector device="QHY CCD QHY5III290C-1ca" name="CCD_EXPOSURE" state="Busy" timeout="60" timestamp="2025-02-16T03:07:00">
+    <oneNumber name="CCD_EXPOSURE_VALUE">
+0.38900000000000001243
+    </oneNumber>
+</setNumberVector>
+
+.x...x.i<setNumberVector device="QHY CCD QHY5III290C-1ca" name="CCD_EXPOSURE" state="Busy" timeout="60" timestamp="2025-02-16T03:07:00">
+    <oneNumber name="CCD_EXPOSURE_VALUE">
+0.28899999999999992362
+    </oneNumber>
+</setNumberVector>
+
+.x...x.i<setNumberVector device="QHY CCD QHY5III290C-1ca" name="CCD_EXPOSURE" state="Busy" timeout="60" timestamp="2025-02-16T03:07:00">
+    <oneNumber name="CCD_EXPOSURE_VALUE">
+0.28899999999999992362
+    </oneNumber>
+</setNumberVector>
+
+.x.2.x..<setNumberVector device="QHY CCD QHY5III290C-1ca" name="CCD_EXPOSURE" state="Busy" timeout="60" timestamp="2025-02-16T03:07:00">
+    <oneNumber name="CCD_EXPOSURE_VALUE">
+0.18900000000000005684
+    </oneNumber>
+</setNumberVector>
+
+.x.2.x..<setNumberVector device="QHY CCD QHY5III290C-1ca" name="CCD_EXPOSURE" state="Busy" timeout="60" timestamp="2025-02-16T03:07:00">
+    <oneNumber name="CCD_EXPOSURE_VALUE">
+0.18900000000000005684
+    </oneNumber>
+</setNumberVector>
+
+.x...x.2<setNumberVector device="QHY CCD QHY5III290C-1ca" name="CCD_EXPOSURE" state="Busy" timeout="60" timestamp="2025-02-16T03:07:00">
+    <oneNumber name="CCD_EXPOSURE_VALUE">
+0.088999999999999968026
+    </oneNumber>
+</setNumberVector>
+
+.x...x.2<setNumberVector device="QHY CCD QHY5III290C-1ca" name="CCD_EXPOSURE" state="Busy" timeout="60" timestamp="2025-02-16T03:07:00">
+    <oneNumber name="CCD_EXPOSURE_VALUE">
+0.088999999999999968026
+    </oneNumber>
+</setNumberVector>
+
+.x...x..<setNumberVector device="QHY CCD QHY5III290C-1ca" name="CCD_EXPOSURE" state="Busy" timeout="60" timestamp="2025-02-16T03:07:00">
+    <oneNumber name="CCD_EXPOSURE_VALUE">
+0
+    </oneNumber>
+</setNumberVector>
+
+.x...x..<setNumberVector device="QHY CCD QHY5III290C-1ca" name="CCD_EXPOSURE" state="Busy" timeout="60" timestamp="2025-02-16T03:07:00">
+    <oneNumber name="CCD_EXPOSURE_VALUE">
+0
+    </oneNumber>
+</setNumberVector>
+
+.x.2.x..<setNumberVector device="QHY CCD QHY5III290C-1ca" name="CCD_EXPOSURE" state="Ok" timeout="60" timestamp="2025-02-16T03:07:00">
+    <oneNumber name="CCD_EXPOSURE_VALUE">
+0
+    </oneNumber>
+</setNumberVector>
+
+.x.2.x..<setBLOBVector device="QHY CCD QHY5III290C-1ca" name="CCD1" state="Ok" timeout="60" timestamp="2025-02-16T03:07:00">
+    <oneBLOB name="CCD1" size="4150080" format=".fits" len="4150080">
+
+    </oneBLOB>
+</setBLOBVector>
+
+.x.9.x.9<setNumberVector device="QHY CCD QHY5III290C-1ca" name="CCD_EXPOSURE" state="Ok" timeout="60" timestamp="2025-02-16T03:07:00">
+    <oneNumber name="CCD_EXPOSURE_VALUE">
+0
+    </oneNumber>
+</setNumberVector>
+
+  <oneSwitch name='DISCONNECT'>
+      On
+  </oneSwitch>
+</newSwitchVector>
+
+.x.%.x.@<newSwitchVector device="QHY CCD QHY5III290C-1ca" name="CONNECTION">
+    <oneSwitch name="DISCONNECT">
+On
+    </oneSwitch>
+</newSwitchVector>
+
+.x...x.%<message device="QHY CCD QHY5III290C-1ca" timestamp="2025-02-16T03:07:16" message="[INFO] Camera is offline."/>
+
+.x...x.%<message device="QHY CCD QHY5III290C-1ca" timestamp="2025-02-16T03:07:16" message="[INFO] Camera is offline."/>
+
+.x...x..<setSwitchVector device="QHY CCD QHY5III290C-1ca" name="CONNECTION" state="Idle" timeout="60" timestamp="2025-02-16T03:07:16">
+    <oneSwitch name="CONNECT">
+Off
+    </oneSwitch>
+    <oneSwitch name="DISCONNECT">
+On
+    </oneSwitch>
+</setSwitchVector>
+
+.x...x..<setSwitchVector device="QHY CCD QHY5III290C-1ca" name="CONNECTION" state="Idle" timeout="60" timestamp="2025-02-16T03:07:16">
+    <oneSwitch name="CONNECT">
+Off
+    </oneSwitch>
+    <oneSwitch name="DISCONNECT">
+On
+    </oneSwitch>
+</setSwitchVector>
+
+.x...x..<delProperty device="QHY CCD QHY5III290C-1ca" name="CCD_FRAME" timestamp="2025-02-16T03:07:16"/>
+
+.x...x..<delProperty device="QHY CCD QHY5III290C-1ca" name="CCD_FRAME" timestamp="2025-02-16T03:07:16"/>
+
+.x...x..<delProperty device="QHY CCD QHY5III290C-1ca" name="CCD_FRAME_RESET" timestamp="2025-02-16T03:07:16"/>
+
+.x...x..<delProperty device="QHY CCD QHY5III290C-1ca" name="CCD_INFO" timestamp="2025-02-16T03:07:16"/>
+
+.x...x..<delProperty device="QHY CCD QHY5III290C-1ca" name="CCD_CAPTURE_FORMAT" timestamp="2025-02-16T03:07:16"/>
+
+.x...x..<delProperty device="QHY CCD QHY5III290C-1ca" name="CCD_TRANSFER_FORMAT" timestamp="2025-02-16T03:07:16"/>
+
+.x...x..<delProperty device="QHY CCD QHY5III290C-1ca" name="CCD_BINNING" timestamp="2025-02-16T03:07:16"/>
+
+.x...x..<delProperty device="QHY CCD QHY5III290C-1ca" name="CCD_FRAME_RESET" timestamp="2025-02-16T03:07:16"/>
+<delProperty device="QHY CCD QHY5III290C-1ca" name="CCD_INFO" timestamp="2025-02-16T03:07:16"/>
+<delProperty device="QHY CCD QHY5III290C-1ca" name="CCD_CAPTURE_FORMAT" timestamp="2025-02-16T03:07:16"/>
+<delProperty device="QHY CCD QHY5III290C-1ca" name="CCD_TRANSFER_FORMAT" timestamp="2025-02-16T03:07:16"/>
+
+.x...x..<delProperty device="QHY CCD QHY5III290C-1ca" name="CCD_EXPOSURE" timestamp="2025-02-16T03:07:16"/>
+
+.x...x..<delProperty device="QHY CCD QHY5III290C-1ca" name="CCD_ABORT_EXPOSURE" timestamp="2025-02-16T03:07:16"/>
+
+.x...x..<delProperty device="QHY CCD QHY5III290C-1ca" name="CCD1" timestamp="2025-02-16T03:07:16"/>
+
+.x...x..<delProperty device="QHY CCD QHY5III290C-1ca" name="CCD_COMPRESSION" timestamp="2025-02-16T03:07:16"/>
+
+.x...x..<delProperty device="QHY CCD QHY5III290C-1ca" name="FITS_HEADER" timestamp="2025-02-16T03:07:16"/>
+
+.x...x..<delProperty device="QHY CCD QHY5III290C-1ca" name="CCD_BINNING" timestamp="2025-02-16T03:07:16"/>
+<delProperty device="QHY CCD QHY5III290C-1ca" name="CCD_EXPOSURE" timestamp="2025-02-16T03:07:16"/>
+<delProperty device="QHY CCD QHY5III290C-1ca" name="CCD_ABORT_EXPOSURE" timestamp="2025-02-16T03:07:16"/>
+<delProperty device="QHY CCD QHY5III290C-1ca" name="CCD1" timestamp="2025-02-16T03:07:16"/>
+<delProperty device="QHY CCD QHY5III290C-1ca" name="CCD_COMPRESSION" timestamp="2025-02-16T03:07:16"/>
+
+.x...x..<delProperty device="QHY CCD QHY5III290C-1ca" name="TELESCOPE_TIMED_GUIDE_NS" timestamp="2025-02-16T03:07:16"/>
+
+.x...x..<delProperty device="QHY CCD QHY5III290C-1ca" name="TELESCOPE_TIMED_GUIDE_WE" timestamp="2025-02-16T03:07:16"/>
+
+.x...x..<delProperty device="QHY CCD QHY5III290C-1ca" name="CCD_FRAME_TYPE" timestamp="2025-02-16T03:07:16"/>
+
+.x...x..<delProperty device="QHY CCD QHY5III290C-1ca" name="CCD_CFA" timestamp="2025-02-16T03:07:16"/>
+
+.x...x..<delProperty device="QHY CCD QHY5III290C-1ca" name="FITS_HEADER" timestamp="2025-02-16T03:07:16"/>
+<delProperty device="QHY CCD QHY5III290C-1ca" name="TELESCOPE_TIMED_GUIDE_NS" timestamp="2025-02-16T03:07:16"/>
+<delProperty device="QHY CCD QHY5III290C-1ca" name="TELESCOPE_TIMED_GUIDE_WE" timestamp="2025-02-16T03:07:16"/>
+<delProperty device="QHY CCD QHY5III290C-1ca" name="CCD_FRAME_TYPE" timestamp="2025-02-16T03:07:16"/>
+<delProperty device="QHY CCD QHY5III290C-1ca" name="CCD_CFA" timestamp="2025-02-16T03:07:16"/>
+<delProperty device="QHY CCD QHY5III290C-1ca" name="SCOPE_INFO" timestamp="2025-02-16T03:07:16"/>
+<delProperty device="QHY CCD QHY5III290C-1ca" name="CCD_ROTATION" timestamp="2025-02-16T03:07:16"/>
+<delProperty device="QHY CCD QHY5III290C-1ca" name="WCS_CONTROL" timestamp="2025-02-16T03:07:16"/>
+<delProperty device="QHY CCD QHY5III290C-1ca" name="UPLOAD_MODE" timestamp="2025-02-16T03:07:16"/>
+<delProperty device="QHY CCD QHY5III290C-1ca" name="UPLOAD_SETTINGS" timestamp="2025-02-16T03:07:16"/>
+<delProperty device="QHY CCD QHY5III290C-1ca" name="CCD_FAST_TOGGLE" timestamp="2025-02-16T03:07:16"/>
+
+.x...x..<delProperty device="QHY CCD QHY5III290C-1ca" name="SCOPE_INFO" timestamp="2025-02-16T03:07:16"/>
+<delProperty device="QHY CCD QHY5III290C-1ca" name="CCD_ROTATION" timestamp="2025-02-16T03:07:16"/>
+<delProperty device="QHY CCD QHY5III290C-1ca" name="WCS_CONTROL" timestamp="2025-02-16T03:07:16"/>
+<delProperty device="QHY CCD QHY5III290C-1ca" name="UPLOAD_MODE" timestamp="2025-02-16T03:07:16"/>
+<delProperty device="QHY CCD QHY5III290C-1ca" name="UPLOAD_SETTINGS" timestamp="2025-02-16T03:07:16"/>
+<delProperty device="QHY CCD QHY5III290C-1ca" name="CCD_FAST_TOGGLE" timestamp="2025-02-16T03:07:16"/>
+<delProperty device="QHY CCD QHY5III290C-1ca" name="CCD_FAST_COUNT" timestamp="2025-02-16T03:07:16"/>
+<delProperty device="QHY CCD QHY5III290C-1ca" name="CCD_VIDEO_STREAM" timestamp="2025-02-16T03:07:16"/>
+
+.x...x..<delProperty device="QHY CCD QHY5III290C-1ca" name="STREAM_DELAY" timestamp="2025-02-16T03:07:16"/>
+<delProperty device="QHY CCD QHY5III290C-1ca" name="STREAMING_EXPOSURE" timestamp="2025-02-16T03:07:16"/>
+<delProperty device="QHY CCD QHY5III290C-1ca" name="FPS" timestamp="2025-02-16T03:07:16"/>
+<delProperty device="QHY CCD QHY5III290C-1ca" name="RECORD_FILE" timestamp="2025-02-16T03:07:16"/>
+<delProperty device="QHY CCD QHY5III290C-1ca" name="RECORD_STREAM" timestamp="2025-02-16T03:07:16"/>
+<delProperty device="QHY CCD QHY5III290C-1ca" name="RECORD_OPTIONS" timestamp="2025-02-16T03:07:16"/>
+
+.x...x..<delProperty device="QHY CCD QHY5III290C-1ca" name="CCD_STREAM_FRAME" timestamp="2025-02-16T03:07:16"/>
+<delProperty device="QHY CCD QHY5III290C-1ca" name="CCD_STREAM_ENCODER" timestamp="2025-02-16T03:07:16"/>
+<delProperty device="QHY CCD QHY5III290C-1ca" name="CCD_STREAM_RECORDER" timestamp="2025-02-16T03:07:16"/>
+<delProperty device="QHY CCD QHY5III290C-1ca" name="LIMITS" timestamp="2025-02-16T03:07:16"/>
+
+.x...x..<delProperty device="QHY CCD QHY5III290C-1ca" name="CCD_FAST_COUNT" timestamp="2025-02-16T03:07:16"/>
+<delProperty device="QHY CCD QHY5III290C-1ca" name="CCD_VIDEO_STREAM" timestamp="2025-02-16T03:07:16"/>
+<delProperty device="QHY CCD QHY5III290C-1ca" name="STREAM_DELAY" timestamp="2025-02-16T03:07:16"/>
+<delProperty device="QHY CCD QHY5III290C-1ca" name="STREAMING_EXPOSURE" timestamp="2025-02-16T03:07:16"/>
+<delProperty device="QHY CCD QHY5III290C-1ca" name="FPS" timestamp="2025-02-16T03:07:16"/>
+<delProperty device="QHY CCD QHY5III290C-1ca" name="RECORD_FILE" timestamp="2025-02-16T03:07:16"/>
+<delProperty device="QHY CCD QHY5III290C-1ca" name="RECORD_STREAM" timestamp="2025-02-16T03:07:16"/>
+<delProperty device="QHY CCD QHY5III290C-1ca" name="RECORD_OPTIONS" timestamp="2025-02-16T03:07:16"/>
+<delProperty device="QHY CCD QHY5III290C-1ca" name="CCD_STREAM_FRAME" timestamp="2025-02-16T03:07:16"/>
+<delProperty device="QHY CCD QHY5III290C-1ca" name="CCD_STREAM_ENCODER" timestamp="2025-02-16T03:07:16"/>
+<delProperty device="QHY CCD QHY5III290C-1ca" name="CCD_STREAM_RECORDER" timestamp="2025-02-16T03:07:16"/>
+<delProperty device="QHY CCD QHY5III290C-1ca" name="LIMITS" timestamp="2025-02-16T03:07:16"/>
+<delProperty device="QHY CCD QHY5III290C-1ca" name="CCD_GAIN" timestamp="2025-02-16T03:07:16"/>
+<delProperty device="QHY CCD QHY5III290C-1ca" name="CCD_OFFSET" timestamp="2025-02-16T03:07:16"/>
+<delProperty device="QHY CCD QHY5III290C-1ca" name="USB_TRAFFIC" timestamp="2025-02-16T03:07:16"/>
+<delProperty device="QHY CCD QHY5III290C-1ca" name="USB_BUFFER" timestamp="2025-02-16T03:07:16"/>
+
+.x...x..<delProperty device="QHY CCD QHY5III290C-1ca" name="CCD_GAIN" timestamp="2025-02-16T03:07:16"/>
+<delProperty device="QHY CCD QHY5III290C-1ca" name="CCD_OFFSET" timestamp="2025-02-16T03:07:16"/>
+<delProperty device="QHY CCD QHY5III290C-1ca" name="USB_TRAFFIC" timestamp="2025-02-16T03:07:16"/>
+<delProperty device="QHY CCD QHY5III290C-1ca" name="USB_BUFFER" timestamp="2025-02-16T03:07:16"/>
+
+.x...x..<delProperty device="QHY CCD QHY5III290C-1ca" name="SDK_VERSION" timestamp="2025-02-16T03:07:16"/>
+<delProperty device="QHY CCD QHY5III290C-1ca" name="CCD_AMP_GLOW" timestamp="2025-02-16T03:07:16"/>
+
+.x...x..<delProperty device="QHY CCD QHY5III290C-1ca" name="SDK_VERSION" timestamp="2025-02-16T03:07:16"/>
+<delProperty device="QHY CCD QHY5III290C-1ca" name="CCD_AMP_GLOW" timestamp="2025-02-16T03:07:16"/>
+

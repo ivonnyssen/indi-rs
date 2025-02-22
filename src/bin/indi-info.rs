@@ -1,11 +1,11 @@
 use clap::Parser;
-use colored::*;
-use indi_rs::client::{Client, ClientConfig};
-use indi_rs::property::{PropertyState, PropertyValue};
-use std::error::Error;
-use tracing::{debug, info, Level};
+use indi_rs::{
+    client::{Client, ClientConfig},
+    error::Result,
+};
+use tracing::info;
 
-#[derive(Parser)]
+#[derive(Parser, Debug)]
 #[command(author, version, about, long_about = None)]
 struct Args {
     /// INDI server host
@@ -16,96 +16,47 @@ struct Args {
     #[arg(short = 'P', long, default_value_t = 7624)]
     port: u16,
 
-    /// Enable debug output
-    #[arg(short = 'd', long)]
-    debug: bool,
+    /// Device to connect to
+    #[arg(short, long)]
+    device: Option<String>,
+
+    /// Exposure time in seconds
+    #[arg(short, long)]
+    exposure: Option<f64>,
 }
 
-fn format_property_value(value: &PropertyValue) -> String {
-    match value {
-        PropertyValue::Text(text) => text.to_string(),
-        PropertyValue::Number(num, format) => match format {
-            Some(fmt) => format!("{} {}", num, fmt),
-            None => num.to_string(),
-        },
-        PropertyValue::Switch(state) => if *state { "On".green() } else { "Off".red() }.to_string(),
-        PropertyValue::Light(state) => match state {
-            PropertyState::Idle => "Idle".yellow(),
-            PropertyState::Ok => "Ok".green(),
-            PropertyState::Busy => "Busy".blue(),
-            PropertyState::Alert => "Alert".red(),
-        }
-        .to_string(),
-        PropertyValue::Blob { format, size, .. } => {
-            format!("[BLOB format={} size={}]", format, size)
-        }
-    }
+async fn process_camera(_client: &mut Client, device: &str, _exposure: Option<f64>) -> Result<()> {
+    info!("Processing camera {}", device);
+    Ok(())
 }
 
-fn format_property_state(state: &PropertyState) -> ColoredString {
-    match state {
-        PropertyState::Idle => "Idle".yellow(),
-        PropertyState::Ok => "Ok".green(),
-        PropertyState::Busy => "Busy".blue(),
-        PropertyState::Alert => "Alert".red(),
-    }
+async fn find_cameras(_client: &mut Client) -> Result<Vec<String>> {
+    Ok(vec![])
 }
 
 #[tokio::main]
-async fn main() -> Result<(), Box<dyn Error>> {
+async fn main() -> Result<()> {
     let args = Args::parse();
 
-    // Initialize tracing with debug if requested
-    if args.debug {
-        tracing_subscriber::fmt()
-            .with_max_level(Level::DEBUG)
-            .init();
-    } else {
-        tracing_subscriber::fmt().with_max_level(Level::INFO).init();
-    }
-
-    info!("Connecting to INDI server at {}:{}", args.host, args.port);
+    // Create client config
     let config = ClientConfig {
-        server_addr: format!("{}:{}", args.host, args.port),
+        host: args.host,
+        port: args.port,
     };
-    let client = Client::new(config).await?;
-    client.connect().await?;
 
-    info!("Getting properties...");
-    let devices = client.get_devices().await?;
+    // Connect to INDI server
+    let mut client = Client::new(config).await?;
 
-    for device in devices {
-        if let Some(properties) = client.get_device_properties(&device).await {
-            debug!(device = %device, property_count = %properties.len(), "Got device properties");
-            println!("\n{}", format!("Device: {}", device).bold());
-            for (name, prop) in properties {
-                debug!(
-                    property = %name,
-                    value = ?prop.value,
-                    state = ?prop.state,
-                    perm = %prop.perm,
-                    "Processing property"
-                );
-                println!("  {}", name.bold());
-                println!(
-                    "    Type: {}",
-                    match prop.value {
-                        PropertyValue::Text(_) => "Text",
-                        PropertyValue::Number(_, _) => "Number",
-                        PropertyValue::Switch(_) => "Switch",
-                        PropertyValue::Light(_) => "Light",
-                        PropertyValue::Blob { .. } => "BLOB",
-                    }
-                );
-                println!("    Value: {}", format_property_value(&prop.value));
-                println!("    State: {}", format_property_state(&prop.state));
-                println!("    Permissions: {}", prop.perm.to_string().cyan());
-                if let Some(label) = prop.label {
-                    println!("    Label: {}", label);
-                }
-                if let Some(group) = prop.group {
-                    println!("    Group: {}", group);
-                }
+    // Process specific device or find all cameras
+    if let Some(device) = args.device {
+        process_camera(&mut client, &device, args.exposure).await?;
+    } else {
+        let cameras = find_cameras(&mut client).await?;
+        if cameras.is_empty() {
+            info!("No cameras found");
+        } else {
+            for camera in cameras {
+                process_camera(&mut client, &camera, args.exposure).await?;
             }
         }
     }
