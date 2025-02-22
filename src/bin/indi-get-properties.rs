@@ -1,8 +1,8 @@
-use indi_rs::client::{Client, ClientConfig};
+use clap::Parser;
 use indi_rs::client::connection::Connection;
 use indi_rs::client::message::MessageHandler;
+use indi_rs::client::{Client, ClientConfig};
 use tracing::{debug, info};
-use clap::Parser;
 
 /// INDI getProperties command line tool
 #[derive(Parser, Debug)]
@@ -49,11 +49,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         port: args.port,
     };
 
-    info!("Connecting to INDI server at {}:{}", config.host, config.port);
-    
+    info!(
+        "Connecting to INDI server at {}:{}",
+        config.host, config.port
+    );
+
     // Connect to the INDI server
     let mut client = Client::new(config).await?;
-    
+
     // Build getProperties message
     let mut message = String::from("<getProperties version='1.7'");
     if let Some(device) = args.device {

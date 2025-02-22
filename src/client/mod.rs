@@ -1,24 +1,27 @@
-use std::sync::Arc;
-use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader, BufWriter};
-use tokio::net::{TcpStream, tcp::{OwnedReadHalf, OwnedWriteHalf}};
-use tokio::sync::Mutex;
 use crate::error::Result;
 use crate::message::Message;
+use std::sync::Arc;
+use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader, BufWriter};
+use tokio::net::{
+    tcp::{OwnedReadHalf, OwnedWriteHalf},
+    TcpStream,
+};
+use tokio::sync::Mutex;
 use tracing::{debug, error};
 
 /// Configuration module for INDI client
 mod config;
-/// State management module for INDI client
-mod state;
-/// Message handling module for INDI client
-pub mod message;
 /// Connection handling for INDI protocol
 pub mod connection;
+/// Message handling module for INDI client
+pub mod message;
+/// State management module for INDI client
+mod state;
 
+use self::connection::Connection;
+pub use self::message::MessageHandler;
 pub use config::ClientConfig;
 pub use state::ClientState;
-pub use self::message::MessageHandler;
-use self::connection::Connection;
 
 /// INDI client implementation
 ///
@@ -41,7 +44,7 @@ impl Client {
         debug!("Connecting to {}:{}", config.host, config.port);
         let stream = TcpStream::connect((config.host.as_str(), config.port)).await?;
         let (read_half, write_half) = stream.into_split();
-        
+
         Ok(Self {
             config,
             state: Arc::new(Mutex::new(ClientState::default())),
@@ -67,7 +70,10 @@ impl Client {
 
     /// Read messages from the server
     pub async fn read_messages(&self) -> Result<()> {
-        debug!("Starting message reader for {}:{}", self.config.host, self.config.port);
+        debug!(
+            "Starting message reader for {}:{}",
+            self.config.host, self.config.port
+        );
         let mut buf = Vec::new();
         loop {
             let mut reader = self.reader.lock().await;
@@ -82,7 +88,10 @@ impl Client {
                     buf.clear();
                 }
                 Err(e) => {
-                    error!("Error reading from server {}:{}: {}", self.config.host, self.config.port, e);
+                    error!(
+                        "Error reading from server {}:{}: {}",
+                        self.config.host, self.config.port, e
+                    );
                     return Err(e.into());
                 }
             }
@@ -93,14 +102,22 @@ impl Client {
 
 impl Connection for Client {
     async fn disconnect(&mut self) -> Result<()> {
-        debug!("Disconnecting from server {}:{}", self.config.host, self.config.port);
+        debug!(
+            "Disconnecting from server {}:{}",
+            self.config.host, self.config.port
+        );
         Ok(())
     }
 }
 
 impl MessageHandler for Client {
     async fn send_message(&mut self, message: &str) -> Result<()> {
-        debug!("Sending message to {}:{}: {}", self.config.host, self.config.port, message.trim());
+        debug!(
+            "Sending message to {}:{}: {}",
+            self.config.host,
+            self.config.port,
+            message.trim()
+        );
         let writer = self.writer();
         let mut writer = writer.lock().await;
         writer.write_all(message.as_bytes()).await?;
