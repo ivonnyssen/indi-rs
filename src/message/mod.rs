@@ -1,101 +1,57 @@
+//! INDI Protocol Message Types
+//! 
+//! This module implements the INDI (Instrument Neutral Distributed Interface) protocol message types
+//! as defined in the [INDI Protocol Specification](https://www.indilib.org/develop/developer-manual/104-indi-protocol.html).
+//! 
+//! The protocol is XML-based and defines several types of messages for device control and property management:
+//! 
+//! - Property Definitions (defXXXVector)
+//! - Property Updates (setXXXVector, newXXXVector)
+//! - Property Queries (getProperties)
+//! - Property Deletion (delProperty)
+//! - BLOB Transfer Control (enableBLOB)
+//! 
+//! Each property type (Text, Number, Switch, Light, BLOB) has its own module with consistent structure:
+//! - `define.rs`: Property definition types
+//! - `set.rs`: Property update request types
+//! - `new.rs`: Property update notification types
+//! 
+//! Common functionality is shared through the `common` module, including the `INDIVector` trait
+//! which provides a unified interface for all vector types.
+//! 
+//! # Examples
+//! 
+//! ```rust
+//! use indi::message::MessageType;
+//! use std::str::FromStr;
+//! 
+//! // Parse a getProperties message
+//! let xml = r#"<getProperties version="1.7" device="CCD Simulator"/>"#;
+//! let message = MessageType::from_str(xml).unwrap();
+//! 
+//! // Create and serialize a message
+//! let xml = message.to_xml().unwrap();
+//! ```
+//! 
+//! For more examples, see the test module.
+
 use crate::error::{Error, Result};
 use quick_xml::de::from_str;
 use quick_xml::se::to_string;
 use serde::{Deserialize, Serialize};
 use std::str::FromStr;
 
-/// Message handling for the INDI protocol
-pub mod basic;
-/// Message definitions for the INDI protocol
-pub mod definition;
-/// Message types for creating new properties
-pub mod new;
-/// Message types for setting property values
-pub mod set;
-/// Message types for BLOB data
 pub mod blob;
-/// Tests for the message module
-#[cfg(test)]
-mod tests;
+pub mod common;
+pub mod light;
+pub mod number;
+pub mod switch;
+pub mod text;
 
-/// Raw message content
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct Message {
-    /// The raw XML content of the message
-    pub content: String,
-}
-
-impl Message {
-    /// Create a new message
-    pub fn new(content: String) -> Self {
-        Self { content }
-    }
-}
-
-/// INDI message type
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub enum MessageType {
-    /// Get properties request
-    GetProperties(basic::GetProperties),
-    /// General message
-    Message(Message),
-    /// Enable BLOB transfer
-    EnableBLOB(blob::EnableBlob),
-    /// Define text vector
-    DefTextVector(definition::DefTextVector),
-    /// Define number vector
-    DefNumberVector(definition::DefNumberVector),
-    /// Define switch vector
-    DefSwitchVector(definition::DefSwitchVector),
-    /// Define BLOB vector
-    DefBLOBVector(definition::DefBLOBVector),
-    /// New text vector
-    NewTextVector(new::NewTextVector),
-    /// New number vector
-    NewNumberVector(new::NewNumberVector),
-    /// New switch vector
-    NewSwitchVector(new::NewSwitchVector),
-    /// New BLOB vector
-    NewBLOBVector(blob::NewBLOBVector),
-    /// Set text vector
-    SetTextVector(set::SetTextVector),
-    /// Set number vector
-    SetNumberVector(set::SetNumberVector),
-    /// Set switch vector
-    SetSwitchVector(set::SetSwitchVector),
-    /// Set BLOB vector
-    SetBLOBVector(blob::SetBLOBVector),
-}
-
-/// BLOB enable values
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(rename_all = "PascalCase")]
-pub enum BLOBEnable {
-    /// Never send BLOB data
-    Never,
-    /// Send BLOB data along with other messages
-    Also,
-    /// Only send BLOB data
-    Only,
-}
-
-impl MessageType {
-    /// Convert message to XML string
-    pub fn to_xml(&self) -> Result<String> {
-        to_string(&self).map_err(|e| Error::SerializationError(e.to_string()))
-    }
-
-    /// Parse a message from bytes asynchronously
-    pub async fn from_bytes(bytes: &[u8]) -> Result<Self> {
-        from_str(std::str::from_utf8(bytes).unwrap()).map_err(Error::XmlDe)
-    }
-}
-
-impl FromStr for MessageType {
-    type Err = Error;
-
-    fn from_str(s: &str) -> Result<Self> {
-        from_str(s).map_err(Error::XmlDe)
-    }
-}
+pub use blob::{DefBLOB, DefBLOBVector};
+pub use common::vector::INDIVector;
+pub use common::message::{Message, MessageType};
+pub use light::{DefLight, DefLightVector};
+pub use number::{DefNumber, DefNumberVector};
+pub use switch::{DefSwitch, DefSwitchVector};
+pub use text::{DefText, DefTextVector};

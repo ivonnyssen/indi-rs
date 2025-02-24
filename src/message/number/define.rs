@@ -1,5 +1,5 @@
 use crate::prelude::PropertyPerm;
-use crate::property::PropertyState;
+use crate::message::common::PropertyState;
 use crate::timestamp::INDITimestamp;
 use crate::message::common::vector::INDIVector;
 use serde::{Deserialize, Serialize};
@@ -11,7 +11,7 @@ pub struct DefNumber {
     #[serde(rename = "@name")]
     pub name: String,
     /// Number label
-    #[serde(rename = "@label")]
+    #[serde(rename = "@label", skip_serializing_if = "Option::is_none")]
     pub label: Option<String>,
     /// Number format
     #[serde(rename = "@format")]
@@ -59,10 +59,10 @@ pub struct DefNumberVector {
     #[serde(rename = "@name")]
     pub name: String,
     /// Property label
-    #[serde(rename = "@label")]
+    #[serde(rename = "@label", skip_serializing_if = "Option::is_none")]
     pub label: Option<String>,
     /// Property group
-    #[serde(rename = "@group")]
+    #[serde(rename = "@group", skip_serializing_if = "Option::is_none")]
     pub group: Option<String>,
     /// Property state
     #[serde(rename = "@state")]
@@ -71,13 +71,13 @@ pub struct DefNumberVector {
     #[serde(rename = "@perm")]
     pub perm: PropertyPerm,
     /// Property timeout
-    #[serde(rename = "@timeout")]
+    #[serde(rename = "@timeout", skip_serializing_if = "Option::is_none")]
     pub timeout: Option<f64>,
     /// Property timestamp
-    #[serde(rename = "@timestamp")]
+    #[serde(rename = "@timestamp", skip_serializing_if = "Option::is_none")]
     pub timestamp: Option<INDITimestamp>,
     /// Optional message
-    #[serde(rename = "@message")]
+    #[serde(rename = "@message", skip_serializing_if = "Option::is_none")]
     pub message: Option<String>,
     /// Number elements
     #[serde(rename = "defNumber")]

@@ -1,5 +1,5 @@
 use crate::prelude::PropertyPerm;
-use crate::property::PropertyState;
+use crate::message::common::PropertyState;
 use crate::timestamp::INDITimestamp;
 
 /// Common trait for all INDI vector types, following the INDI protocol DTD specification.

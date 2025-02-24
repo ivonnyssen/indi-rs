@@ -22,7 +22,7 @@ pub struct EnableBlob {
     #[serde(rename = "@device")]
     pub device: String,
     /// Name of BLOB Property, or all if absent
-    #[serde(rename = "@name")]
+    #[serde(rename = "@name", skip_serializing_if = "Option::is_none")]
     pub name: Option<String>,
     /// BLOB enable value
     #[serde(rename = "$text")]

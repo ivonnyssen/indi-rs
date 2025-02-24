@@ -35,7 +35,7 @@ pub struct NewSwitchVector {
 mod tests {
     use super::*;
     use std::str::FromStr;
-    use crate::property::SwitchState;
+    use crate::message::switch::SwitchState;
 
     #[test]
     fn test_new_switch_vector() {

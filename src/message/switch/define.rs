@@ -1,5 +1,5 @@
-use crate::prelude::PropertyPerm;
-use crate::property::{PropertyState, SwitchRule, SwitchState};
+use crate::prelude::{PropertyPerm, PropertyState};
+use crate::message::switch::{SwitchRule, SwitchState};
 use crate::timestamp::INDITimestamp;
 use crate::message::common::vector::INDIVector;
 use crate::error::Result;
@@ -16,10 +16,10 @@ pub struct DefSwitchVector {
     #[serde(rename = "@name")]
     pub name: String,
     /// GUI label, use name by default
-    #[serde(rename = "@label")]
+    #[serde(rename = "@label", skip_serializing_if = "Option::is_none")]
     pub label: Option<String>,
     /// Property group membership, blank by default
-    #[serde(rename = "@group")]
+    #[serde(rename = "@group", skip_serializing_if = "Option::is_none")]
     pub group: Option<String>,
     /// Current state of Property
     #[serde(rename = "@state")]
@@ -31,13 +31,13 @@ pub struct DefSwitchVector {
     #[serde(rename = "@rule")]
     pub rule: SwitchRule,
     /// Worse-case time, 0 default, N/A for ro
-    #[serde(rename = "@timeout")]
+    #[serde(rename = "@timeout", skip_serializing_if = "Option::is_none")]
     pub timeout: Option<f64>,
     /// Moment when these data were valid
-    #[serde(rename = "@timestamp")]
+    #[serde(rename = "@timestamp", skip_serializing_if = "Option::is_none")]
     pub timestamp: Option<INDITimestamp>,
     /// Commentary
-    #[serde(rename = "@message")]
+    #[serde(rename = "@message", skip_serializing_if = "Option::is_none")]
     pub message: Option<String>,
     /// Switch elements
     #[serde(rename = "defSwitch")]
@@ -52,7 +52,7 @@ pub struct DefSwitch {
     #[serde(rename = "@name")]
     pub name: String,
     /// GUI label, or use name by default
-    #[serde(rename = "@label")]
+    #[serde(rename = "@label", skip_serializing_if = "Option::is_none")]
     pub label: Option<String>,
     /// Switch state
     #[serde(rename = "$text")]

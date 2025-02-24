@@ -1,4 +1,4 @@
-use crate::property::PropertyState;
+use crate::message::common::PropertyState;
 use crate::timestamp::INDITimestamp;
 use super::one::OneText;
 use serde::{Deserialize, Serialize};

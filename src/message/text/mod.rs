@@ -11,7 +11,7 @@ pub use set::SetTextVector;
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::property::PropertyState;
+    use crate::message::common::PropertyState;
     use crate::prelude::PropertyPerm;
 
     #[test]

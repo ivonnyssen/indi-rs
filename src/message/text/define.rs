@@ -1,5 +1,5 @@
 use crate::prelude::PropertyPerm;
-use crate::property::PropertyState;
+use crate::message::common::PropertyState;
 use crate::timestamp::INDITimestamp;
 use crate::message::common::vector::INDIVector;
 use serde::{Deserialize, Serialize};
@@ -16,7 +16,7 @@ pub struct DefText {
     #[serde(rename = "@name")]
     pub name: String,
     /// GUI label, or use name by default
-    #[serde(rename = "@label")]
+    #[serde(rename = "@label", skip_serializing_if = "Option::is_none")]
     pub label: Option<String>,
     /// Text value
     #[serde(rename = "$text")]
@@ -54,10 +54,10 @@ pub struct DefTextVector {
     #[serde(rename = "@name")]
     pub name: String,
     /// GUI label, use name by default
-    #[serde(rename = "@label")]
+    #[serde(rename = "@label", skip_serializing_if = "Option::is_none")]
     pub label: Option<String>,
     /// Property group membership, blank by default
-    #[serde(rename = "@group")]
+    #[serde(rename = "@group", skip_serializing_if = "Option::is_none")]
     pub group: Option<String>,
     /// Current state of Property
     #[serde(rename = "@state")]
@@ -66,13 +66,13 @@ pub struct DefTextVector {
     #[serde(rename = "@perm")]
     pub perm: PropertyPerm,
     /// Worse-case time to affect, 0 default, N/A for ro
-    #[serde(rename = "@timeout")]
+    #[serde(rename = "@timeout", skip_serializing_if = "Option::is_none")]
     pub timeout: Option<f64>,
     /// Moment when these data were valid
-    #[serde(rename = "@timestamp")]
+    #[serde(rename = "@timestamp", skip_serializing_if = "Option::is_none")]
     pub timestamp: Option<INDITimestamp>,
     /// Commentary
-    #[serde(rename = "@message")]
+    #[serde(rename = "@message", skip_serializing_if = "Option::is_none")]
     pub message: Option<String>,
     /// Text elements
     #[serde(rename = "defText")]

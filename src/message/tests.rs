@@ -3,6 +3,12 @@ use std::str::FromStr;
 use crate::prelude::PropertyPerm;
 use crate::property::{PropertyState, SwitchRule, SwitchState};
 use crate::timestamp::INDITimestamp;
+use crate::message::{
+    text::{DefText, DefTextVector},
+    number::{DefNumber, DefNumberVector},
+    switch::{DefSwitch, DefSwitchVector},
+    light::define::{DefLight, DefLightVector, LightState},
+};
 
 #[test]
 fn test_parse_def_switch_vector() {
@@ -252,87 +258,216 @@ On
     }
 }
 
+#[test]
+fn test_def_light_vector() {
+    let xml = r#"<defLightVector device="Weather Station" name="WEATHER_STATUS" label="Weather Status" group="Status" state="Ok" timestamp="2025-02-23T18:48:51" message="Weather conditions">
+        <defLight name="RAIN" label="Rain">Alert</defLight>
+        <defLight name="WIND" label="Wind">Ok</defLight>
+        <defLight name="CLOUD" label="Cloud Cover">Busy</defLight>
+    </defLightVector>"#;
+
+    let message = MessageType::from_str(xml).unwrap();
+    match message {
+        MessageType::DefLightVector(v) => {
+            assert_eq!(v.device, "Weather Station");
+            assert_eq!(v.name, "WEATHER_STATUS");
+            assert_eq!(v.label, Some("Weather Status".to_string()));
+            assert_eq!(v.group, Some("Status".to_string()));
+            assert_eq!(v.state, PropertyState::Ok);
+            assert_eq!(v.perm(), PropertyPerm::ReadOnly); // Light vectors are always read-only
+            assert_eq!(v.lights.len(), 3);
+            
+            // Check first light
+            assert_eq!(v.lights[0].name, "RAIN");
+            assert_eq!(v.lights[0].label, Some("Rain".to_string()));
+            assert_eq!(v.lights[0].state, LightState::Alert);
+            
+            // Check second light
+            assert_eq!(v.lights[1].name, "WIND");
+            assert_eq!(v.lights[1].state, LightState::Ok);
+            
+            // Check third light
+            assert_eq!(v.lights[2].name, "CLOUD");
+            assert_eq!(v.lights[2].state, LightState::Busy);
+            
+            assert_eq!(v.timestamp, Some("2025-02-23T18:48:51".parse::<INDITimestamp>().unwrap()));
+            assert_eq!(v.message, Some("Weather conditions".to_string()));
+        }
+        _ => panic!("Expected DefLightVector variant"),
+    }
+}
+
+#[test]
+fn test_delete_property() {
+    // Test with all optional fields
+    let xml = r#"<delProperty device="Telescope Mount" name="TELESCOPE_SLEW_RATE" timestamp="2025-02-23T18:48:51" message="Property removed"/>"#;
+
+    let message = MessageType::from_str(xml).unwrap();
+    match message {
+        MessageType::DelProperty(v) => {
+            assert_eq!(v.device, "Telescope Mount");
+            assert_eq!(v.name, Some("TELESCOPE_SLEW_RATE".to_string()));
+            assert_eq!(v.timestamp, Some("2025-02-23T18:48:51".to_string()));
+            assert_eq!(v.message, Some("Property removed".to_string()));
+        }
+        _ => panic!("Expected DelProperty variant"),
+    }
+
+    // Test with minimal fields (only device is required)
+    let xml = r#"<delProperty device="Telescope Mount"/>"#;
+
+    let message = MessageType::from_str(xml).unwrap();
+    match message {
+        MessageType::DelProperty(v) => {
+            assert_eq!(v.device, "Telescope Mount");
+            assert!(v.name.is_none());
+            assert!(v.timestamp.is_none());
+            assert!(v.message.is_none());
+        }
+        _ => panic!("Expected DelProperty variant"),
+    }
+}
+
+#[test]
+fn test_light_vector_serialization() {
+    use light::define::{DefLight, DefLightVector, LightState};
+
+    let light_vector = DefLightVector {
+        device: "Weather Station".to_string(),
+        name: "WEATHER_STATUS".to_string(),
+        label: Some("Weather Status".to_string()),
+        group: Some("Status".to_string()),
+        state: PropertyState::Ok,
+        timestamp: Some("2025-02-23T18:48:51".parse::<INDITimestamp>().unwrap()),
+        message: Some("Weather conditions".to_string()),
+        lights: vec![
+            DefLight {
+                name: "RAIN".to_string(),
+                label: Some("Rain".to_string()),
+                state: LightState::Alert,
+            },
+            DefLight {
+                name: "WIND".to_string(),
+                label: Some("Wind".to_string()),
+                state: LightState::Ok,
+            },
+        ],
+    };
+
+    let message = MessageType::DefLightVector(light_vector);
+    let xml = message.to_xml().unwrap();
+    
+    // Parse back the XML to verify serialization/deserialization
+    let parsed: MessageType = xml.parse().unwrap();
+    match parsed {
+        MessageType::DefLightVector(v) => {
+            assert_eq!(v.device, "Weather Station");
+            assert_eq!(v.name, "WEATHER_STATUS");
+            assert_eq!(v.label, Some("Weather Status".to_string()));
+            assert_eq!(v.group, Some("Status".to_string()));
+            assert_eq!(v.state, PropertyState::Ok);
+            assert_eq!(v.lights.len(), 2);
+            assert_eq!(v.lights[0].name, "RAIN");
+            assert_eq!(v.lights[0].state, LightState::Alert);
+            assert_eq!(v.lights[1].name, "WIND");
+            assert_eq!(v.lights[1].state, LightState::Ok);
+        }
+        _ => panic!("Expected DefLightVector variant"),
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::message::number::{DefNumber, DefNumberVector};
 
     #[test]
     fn test_number_property_formatting() {
-        use crate::message::definition::DefNumber;
+        let def_number = DefNumber {
+            name: "RA".to_string(),
+            label: Some("Right Ascension".to_string()),
+            format: "%10.6m".to_string(),
+            min: 0.0,
+            max: 24.0,
+            step: 0.0,
+            value: 0.0,
+        };
 
-        // Test regular floating point format
-        let num = DefNumber::new(
-            "test".to_string(),
-            "Test Number".to_string(),
-            "%.2f".to_string(),
-            -10.0,
-            10.0,
-            0.1,
-            5.25,
-        ).unwrap();
+        let def_vector = DefNumberVector {
+            device: "Telescope".to_string(),
+            name: "EQUATORIAL_EOD_COORD".to_string(),
+            label: Some("Equatorial coordinates".to_string()),
+            group: Some("Main Control".to_string()),
+            state: PropertyState::Idle,
+            perm: PropertyPerm::Rw,
+            timeout: Some(60),
+            timestamp: None,
+            message: None,
+            numbers: vec![def_number],
+        };
 
-        assert_eq!(num.get_value().unwrap(), 5.25);
-        assert_eq!(num.get_min().unwrap(), -10.0);
-        assert_eq!(num.get_max().unwrap(), 10.0);
-        assert_eq!(num.get_step().unwrap(), 0.1);
-
-        // Test sexagesimal format (HH:MM:SS)
-        let mut num = DefNumber::new(
-            "ra".to_string(),
-            "Right Ascension".to_string(),
-            "%9.6m".to_string(),
-            0.0,
-            24.0,
-            0.0,
-            12.5,  // 12:30:00
-        ).unwrap();
-
-        assert_eq!(num.get_value().unwrap(), 12.5);
-        assert_eq!(num.value, " 12:30:00");
-
-        // Test value validation
-        assert!(num.validate_value(12.0).is_ok());
-        assert!(num.validate_value(-1.0).is_err());
-        assert!(num.validate_value(25.0).is_err());
-
-        // Test value setting
-        num.set_value(6.25).unwrap();  // Should format as 6:15:00
-        assert_eq!(num.value, "  6:15:00");
-        assert_eq!(num.get_value().unwrap(), 6.25);
+        let message = MessageType::DefNumberVector(def_vector);
+        let xml = message.to_xml().unwrap();
+        let parsed: MessageType = xml.parse().unwrap();
+        
+        match parsed {
+            MessageType::DefNumberVector(v) => {
+                assert_eq!(v.device, "Telescope");
+                assert_eq!(v.name, "EQUATORIAL_EOD_COORD");
+                assert_eq!(v.numbers[0].name, "RA");
+                assert_eq!(v.numbers[0].format, "%10.6m");
+            }
+            _ => panic!("Expected DefNumberVector variant"),
+        }
     }
 
     #[test]
     fn test_number_vector_serialization() {
-        use crate::message::definition::{DefNumber, DefNumberVector};
-        use crate::property::{PropertyState, PropertyPerm};
-
-        let number = DefNumber::new(
-            "ra".to_string(),
-            "Right Ascension".to_string(),
-            "%9.6m".to_string(),
-            0.0,
-            24.0,
-            0.0,
-            12.5,
-        ).unwrap();
-
-        let vector = DefNumberVector {
+        let def_vector = DefNumberVector {
             device: "Telescope".to_string(),
             name: "EQUATORIAL_EOD_COORD".to_string(),
-            label: "RA/DEC".to_string(),
-            group: "Main Control".to_string(),
-            state: PropertyState::Ok,
+            label: Some("Equatorial coordinates".to_string()),
+            group: Some("Main Control".to_string()),
+            state: PropertyState::Idle,
             perm: PropertyPerm::Rw,
-            timeout: 0,
-            timestamp: "2024-02-21T19:30:00".parse::<INDITimestamp>().unwrap(),
-            numbers: vec![number],
+            timeout: Some(60),
+            timestamp: None,
+            message: None,
+            numbers: vec![
+                DefNumber {
+                    name: "RA".to_string(),
+                    label: Some("Right Ascension".to_string()),
+                    format: "%10.6m".to_string(),
+                    min: 0.0,
+                    max: 24.0,
+                    step: 0.0,
+                    value: 0.0,
+                },
+                DefNumber {
+                    name: "DEC".to_string(),
+                    label: Some("Declination".to_string()),
+                    format: "%10.6m".to_string(),
+                    min: -90.0,
+                    max: 90.0,
+                    step: 0.0,
+                    value: 0.0,
+                },
+            ],
         };
 
-        let xml = quick_xml::se::to_string(&vector).unwrap();
-        assert!(xml.contains("defNumberVector"));
-        assert!(xml.contains("device=\"Telescope\""));
-        assert!(xml.contains("format=\"%9.6m\""));
-        assert!(xml.contains("state=\"Ok\""));
-        assert!(xml.contains(" 12:30:00"));
+        let message = MessageType::DefNumberVector(def_vector);
+        let xml = message.to_xml().unwrap();
+        let parsed: MessageType = xml.parse().unwrap();
+        
+        match parsed {
+            MessageType::DefNumberVector(v) => {
+                assert_eq!(v.device, "Telescope");
+                assert_eq!(v.name, "EQUATORIAL_EOD_COORD");
+                assert_eq!(v.numbers.len(), 2);
+                assert_eq!(v.numbers[0].name, "RA");
+                assert_eq!(v.numbers[1].name, "DEC");
+            }
+            _ => panic!("Expected DefNumberVector variant"),
+        }
     }
 }

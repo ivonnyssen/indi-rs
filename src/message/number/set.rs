@@ -1,5 +1,5 @@
 use serde::{Deserialize, Serialize};
-use crate::property::PropertyState;
+use crate::message::common::PropertyState;
 use crate::timestamp::INDITimestamp;
 use super::one::OneNumber;
 

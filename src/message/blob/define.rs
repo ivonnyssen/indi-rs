@@ -1,5 +1,5 @@
 use crate::prelude::PropertyPerm;
-use crate::property::PropertyState;
+use crate::message::common::PropertyState;
 use crate::timestamp::INDITimestamp;
 use crate::message::common::vector::INDIVector;
 use serde::{Deserialize, Serialize};
@@ -11,7 +11,7 @@ pub struct DefBLOB {
     #[serde(rename = "@name")]
     pub name: String,
     /// BLOB label
-    #[serde(rename = "@label")]
+    #[serde(rename = "@label", skip_serializing_if = "Option::is_none")]
     pub label: Option<String>,
 }
 
@@ -29,10 +29,10 @@ pub struct DefBLOBVector {
     #[serde(rename = "@name")]
     pub name: String,
     /// Label of the property
-    #[serde(rename = "@label")]
+    #[serde(rename = "@label", skip_serializing_if = "Option::is_none")]
     pub label: Option<String>,
     /// Group of the property
-    #[serde(rename = "@group")]
+    #[serde(rename = "@group", skip_serializing_if = "Option::is_none")]
     pub group: Option<String>,
     /// State of the property
     #[serde(rename = "@state")]
@@ -41,13 +41,13 @@ pub struct DefBLOBVector {
     #[serde(rename = "@perm")]
     pub perm: PropertyPerm,
     /// Timeout in seconds
-    #[serde(rename = "@timeout")]
+    #[serde(rename = "@timeout", skip_serializing_if = "Option::is_none")]
     pub timeout: Option<f64>,
     /// Message
-    #[serde(rename = "@message")]
+    #[serde(rename = "@message", skip_serializing_if = "Option::is_none")]
     pub message: Option<String>,
     /// Timestamp
-    #[serde(rename = "@timestamp")]
+    #[serde(rename = "@timestamp", skip_serializing_if = "Option::is_none")]
     pub timestamp: Option<INDITimestamp>,
     /// BLOB elements
     #[serde(rename = "defBLOB")]

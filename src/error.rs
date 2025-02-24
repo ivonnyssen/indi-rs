@@ -3,6 +3,7 @@
 use quick_xml::de::DeError as XmlDeError;
 use quick_xml::events::attributes::AttrError;
 use quick_xml::Error as XmlError;
+use quick_xml::errors::serialize::SeError as XmlSeError;
 use std::io;
 use thiserror::Error;
 
@@ -48,11 +49,25 @@ pub enum Error {
     #[error("XML deserialization error: {0}")]
     XmlDe(#[from] XmlDeError),
 
+    /// XML serialization error
+    #[error("XML serialization error: {0}")]
+    XmlSe(#[from] XmlSeError),
+
     /// XML attribute error
     #[error("XML attribute error: {0}")]
     XmlAttr(#[from] AttrError),
 
+    /// Format error
+    #[error("Format error: {0}")]
+    Format(String),
+
     /// Serialization error
     #[error("Serialization error: {0}")]
     SerializationError(String),
+}
+
+impl From<std::fmt::Error> for Error {
+    fn from(err: std::fmt::Error) -> Self {
+        Error::Format(err.to_string())
+    }
 }

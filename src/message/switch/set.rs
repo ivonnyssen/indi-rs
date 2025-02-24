@@ -1,5 +1,5 @@
 use serde::{Deserialize, Serialize};
-use crate::property::PropertyState;
+use crate::message::common::PropertyState;
 use crate::timestamp::INDITimestamp;
 use super::one::OneSwitch;
 
@@ -34,7 +34,7 @@ pub struct SetSwitchVector {
 mod tests {
     use super::*;
     use std::str::FromStr;
-    use crate::property::SwitchState;
+    use crate::message::switch::SwitchState;
 
     #[test]
     fn test_set_switch_vector() {

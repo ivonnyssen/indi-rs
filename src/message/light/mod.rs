@@ -5,7 +5,7 @@ pub use define::{DefLight, DefLightVector};
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::property::PropertyState;
+    use crate::message::common::PropertyState;
 
     #[test]
     fn test_light_vector_optional_fields() {

@@ -1,4 +1,4 @@
-use crate::property::PropertyState;
+use crate::message::common::PropertyState;
 use crate::timestamp::INDITimestamp;
 use crate::message::common::vector::INDIVector;
 use serde::{Deserialize, Serialize};
@@ -10,7 +10,7 @@ pub struct DefLight {
     #[serde(rename = "@name")]
     pub name: String,
     /// Light label
-    #[serde(rename = "@label")]
+    #[serde(rename = "@label", skip_serializing_if = "Option::is_none")]
     pub label: Option<String>,
     /// Light state
     #[serde(rename = "$text")]
@@ -28,19 +28,19 @@ pub struct DefLightVector {
     #[serde(rename = "@name")]
     pub name: String,
     /// Label of the property
-    #[serde(rename = "@label")]
+    #[serde(rename = "@label", skip_serializing_if = "Option::is_none")]
     pub label: Option<String>,
     /// Group of the property
-    #[serde(rename = "@group")]
+    #[serde(rename = "@group", skip_serializing_if = "Option::is_none")]
     pub group: Option<String>,
     /// State of the property
     #[serde(rename = "@state")]
     pub state: PropertyState,
     /// Timestamp
-    #[serde(rename = "@timestamp")]
+    #[serde(rename = "@timestamp", skip_serializing_if = "Option::is_none")]
     pub timestamp: Option<INDITimestamp>,
     /// Message
-    #[serde(rename = "@message")]
+    #[serde(rename = "@message", skip_serializing_if = "Option::is_none")]
     pub message: Option<String>,
     /// Light elements
     #[serde(rename = "defLight")]

@@ -18,10 +18,10 @@ pub struct SetBLOBVector {
     #[serde(rename = "@state")]
     pub state: PropertyState,
     /// Timestamp
-    #[serde(rename = "@timestamp")]
+    #[serde(rename = "@timestamp", skip_serializing_if = "Option::is_none")]
     pub timestamp: Option<INDITimestamp>,
     /// Message
-    #[serde(rename = "@message")]
+    #[serde(rename = "@message", skip_serializing_if = "Option::is_none")]
     pub message: Option<String>,
     /// BLOB elements
     #[serde(rename = "oneBLOB")]

@@ -1,5 +1,5 @@
 use serde::{Deserialize, Serialize};
-use crate::property::SwitchState;
+use crate::message::switch::SwitchState;
 
 /// One switch element used in new and set operations
 #[derive(Debug, Clone, Serialize, Deserialize)]

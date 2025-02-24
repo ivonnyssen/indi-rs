@@ -14,7 +14,7 @@ pub struct NewBLOBVector {
     #[serde(rename = "@name")]
     pub name: String,
     /// Timestamp
-    #[serde(rename = "@timestamp")]
+    #[serde(rename = "@timestamp", skip_serializing_if = "Option::is_none")]
     pub timestamp: Option<INDITimestamp>,
     /// BLOB elements
     #[serde(rename = "oneBLOB")]

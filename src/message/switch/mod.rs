@@ -1,18 +1,22 @@
 pub mod define;
 pub mod new;
 pub mod one;
+pub mod rule;
 pub mod set;
+pub mod state;
 
 pub use define::{DefSwitch, DefSwitchVector};
 pub use new::NewSwitchVector;
 pub use one::OneSwitch;
+pub use rule::SwitchRule;
 pub use set::SetSwitchVector;
+pub use state::SwitchState;
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::property::{PropertyState, SwitchRule};
-    use crate::prelude::PropertyPerm;
+    use crate::message::switch::SwitchRule;
+    use crate::prelude::{PropertyPerm, PropertyState};
 
     #[test]
     fn test_switch_vector_optional_fields() {
