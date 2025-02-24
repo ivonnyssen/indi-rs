@@ -75,7 +75,7 @@ impl INDIVector for DefLightVector {
         crate::prelude::PropertyPerm::Ro
     }
 
-    fn timeout(&self) -> Option<i32> {
+    fn timeout(&self) -> Option<f64> {
         None
     }
 

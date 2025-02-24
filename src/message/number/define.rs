@@ -72,7 +72,7 @@ pub struct DefNumberVector {
     pub perm: PropertyPerm,
     /// Property timeout
     #[serde(rename = "@timeout")]
-    pub timeout: Option<i32>,
+    pub timeout: Option<f64>,
     /// Property timestamp
     #[serde(rename = "@timestamp")]
     pub timestamp: Option<INDITimestamp>,
@@ -111,7 +111,7 @@ impl INDIVector for DefNumberVector {
         self.perm
     }
 
-    fn timeout(&self) -> Option<i32> {
+    fn timeout(&self) -> Option<f64> {
         self.timeout
     }
 
@@ -142,7 +142,7 @@ mod tests {
             group: Some("test_group".to_string()),
             state: PropertyState::Idle,
             perm: PropertyPerm::Rw,
-            timeout: Some(10),
+            timeout: Some(10.0),
             timestamp: Some(test_timestamp),
             message: Some("test_message".to_string()),
             numbers: vec![],
@@ -155,7 +155,7 @@ mod tests {
         assert_eq!(number_vector.group(), Some("test_group"));
         assert_eq!(number_vector.state(), PropertyState::Idle);
         assert_eq!(number_vector.perm(), PropertyPerm::Rw);
-        assert_eq!(number_vector.timeout(), Some(10));
+        assert_eq!(number_vector.timeout(), Some(10.0));
         assert_eq!(number_vector.message(), Some("test_message"));
         assert!(number_vector.elements().is_empty());
         assert_eq!(number_vector.timestamp().unwrap().to_string(), "2024-01-01T00:00:00");

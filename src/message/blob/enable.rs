@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "PascalCase")]
 pub enum BLOBEnable {
-    /// Never send BLOB data
+    /// Never send BLOB data (default)
     Never,
     /// Send BLOB data along with other messages
     Also,
@@ -12,15 +12,18 @@ pub enum BLOBEnable {
     Only,
 }
 
-/// Enable BLOB message
+/// Command to control whether setBLOBs should be sent to this channel from a given Device.
+/// They can be turned off completely by setting Never (the default), allowed to be intermixed
+/// with other INDI commands by setting Also or made the only command by setting Only.
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename = "enableBLOB")]
 pub struct EnableBlob {
     /// Device name
     #[serde(rename = "@device")]
     pub device: String,
-    /// Property name
+    /// Name of BLOB Property, or all if absent
     #[serde(rename = "@name")]
-    pub name: String,
+    pub name: Option<String>,
     /// BLOB enable value
     #[serde(rename = "$text")]
     pub enable: BLOBEnable,
@@ -31,15 +34,28 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_blob_enable_serialization() {
+    fn test_blob_enable_with_name() {
         let enable = EnableBlob {
             device: "test_device".to_string(),
-            name: "test_name".to_string(),
+            name: Some("test_blob".to_string()),
             enable: BLOBEnable::Also,
         };
 
         assert_eq!(enable.device, "test_device");
-        assert_eq!(enable.name, "test_name");
+        assert_eq!(enable.name, Some("test_blob".to_string()));
         assert_eq!(enable.enable, BLOBEnable::Also);
+    }
+
+    #[test]
+    fn test_blob_enable_without_name() {
+        let enable = EnableBlob {
+            device: "test_device".to_string(),
+            name: None,
+            enable: BLOBEnable::Never,
+        };
+
+        assert_eq!(enable.device, "test_device");
+        assert_eq!(enable.name, None);
+        assert_eq!(enable.enable, BLOBEnable::Never);
     }
 }

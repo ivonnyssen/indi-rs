@@ -42,7 +42,7 @@ pub struct DefBLOBVector {
     pub perm: PropertyPerm,
     /// Timeout in seconds
     #[serde(rename = "@timeout")]
-    pub timeout: Option<u32>,
+    pub timeout: Option<f64>,
     /// Message
     #[serde(rename = "@message")]
     pub message: Option<String>,
@@ -81,8 +81,8 @@ impl INDIVector for DefBLOBVector {
         self.perm
     }
 
-    fn timeout(&self) -> Option<i32> {
-        self.timeout.map(|t| t as i32)
+    fn timeout(&self) -> Option<f64> {
+        self.timeout
     }
 
     fn timestamp(&self) -> Option<&INDITimestamp> {
@@ -112,7 +112,7 @@ mod tests {
             group: Some("test_group".to_string()),
             state: PropertyState::Idle,
             perm: PropertyPerm::Rw,
-            timeout: Some(10),
+            timeout: Some(10.0),
             timestamp: Some(test_timestamp),
             message: Some("test_message".to_string()),
             blobs: vec![],
@@ -125,7 +125,7 @@ mod tests {
         assert_eq!(blob_vector.group(), Some("test_group"));
         assert_eq!(blob_vector.state(), PropertyState::Idle);
         assert_eq!(blob_vector.perm(), PropertyPerm::Rw);
-        assert_eq!(blob_vector.timeout(), Some(10));
+        assert_eq!(blob_vector.timeout(), Some(10.0));
         assert_eq!(blob_vector.message(), Some("test_message"));
         assert!(blob_vector.elements().is_empty());
         assert_eq!(blob_vector.timestamp().unwrap().to_string(), "2024-01-01T00:00:00");

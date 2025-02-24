@@ -55,7 +55,7 @@ pub trait INDIVector {
     fn perm(&self) -> PropertyPerm;
     
     /// Get the timeout value if any (#IMPLIED - 0 default, N/A for ro)
-    fn timeout(&self) -> Option<i32>;
+    fn timeout(&self) -> Option<f64>;
     
     /// Get the vector timestamp if any (#IMPLIED)
     fn timestamp(&self) -> Option<&INDITimestamp>;
